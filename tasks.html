@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskFlow</title>
+    <meta name="description" content="A streamlined productivity and organization tool designed for managing tasks, notes, and daily workflow.">
+    <meta name="keywords" content="productivity, tools, workflow, planner, dashboard, utilities, notes, tasks">
+    <meta property="og:title" content="TaskFlow — Your Daily Productivity Hub">
+    <meta property="og:description" content="A clean, fast, and useful tool for organizing tasks, notes, and personal workflow.">
+    <meta property="og:type" content="website">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        
+        body {
+            margin: 0;
+            background: #0a0a0a;
+            font-family: 'Inter', sans-serif;
+            color: white;
+        }
+        
+        .game-block {
+            background: #1a1a1a;
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid #27272a;
+        }
+        
+        .game-block:hover {
+            transform: translateY(-8px) scale(1.03);
+            border-color: #22c55e;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5);
+        }
+        
+        .game-block img {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.4s ease;
+        }
+        
+        .game-block:hover img {
+            transform: scale(1.08);
+        }
+        
+        .game-block p {
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 14px 8px;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        #overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #0a0a0a;
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        /* In-page game player container */
+        #game-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: black;
+            z-index: 9998;
+            display: none;
+        }
+        #game-frame {
+            border: none;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        #back-btn {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 9999;
+            background: rgba(255, 255, 255, 0.8);
+            color: black;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-family: sans-serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: none;
+            font-weight: 600;
+        }
+        #back-btn:hover {
+            background: rgba(255, 255, 255, 1);
+        }
+    </style>
+</head>
+<body>
+    <div class="max-w-7xl mx-auto px-6 py-10">
+        <h1 class="text-5xl font-bold tracking-tight mb-12 text-center">TaskFlow</h1>
+        
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            <!-- TaskFlow Site Game Block -->
+            <div class="game-block" onclick="launchGame('./algebra/index.html')">
+                <img src="https://static.vecteezy.com/system/resources/thumbnails/006/692/321/small/chatting-message-icon-template-black-color-editable-chatting-message-icon-symbol-flat-illustration-for-graphic-and-web-design-free-vector.jpg" alt="Algebra Site">
+                <p>Cha†</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://learningalgebraof1.wasmer.app')">
+                <img src="https://cdn-icons-png.flaticon.com/512/8911/8911291.png" alt="Br0wse">
+                <p>br0wse</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://learningthealgebraof1.wasmer.app')">
+                <img src="https://static.vecteezy.com/system/resources/previews/006/662/139/non_2x/artificial-intelligence-ai-processor-chip-icon-symbol-for-graphic-design-logo-web-site-social-media-mobile-app-ui-illustration-free-vector.jpg" alt="Al">
+                <p>Al</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://flowingoftasks.wasmer.app/index')">
+                <img src="https://ih1.redbubble.net/image.5278972926.4485/flat,750x,075,f-pad,750x1000,f8f8f8.jpg" alt="ULTRAKILL">
+                <p>ULTRAKILL</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/drift_boss/index.html')">
+                <img src="https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/driftboss.webp" alt="Drift Boss">
+                <p>Drift Boss</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/snow_rider_3d/index.html')">
+                <img src="https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/snowrider3d.webp" alt="Snow Rider 3D">
+                <p>Snow Rider 3D</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/race_survival_arena_king/index.html')">
+                <img src="https://drift-hunters.io/data/image/game/race-survival-arena-king.png" alt="Race Survival Arena King">
+                <p>Race Survival Arena King</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/gun_spin/index.html')">
+                <img src="https://tse4.mm.bing.net/th/id/OIP.Bg7qEtTEG2VmtTWPoOmilgAAAA?w=300&amp;h=300&amp;rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Gun Spin">
+                <p>Gun Spin</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/minecraft/index.html')">
+                <img src="https://images.icon-icons.com/2699/PNG/512/minecraft_logo_icon_168974.png" alt="Minecraft">
+                <p>Minecraft</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://thetasksthatareflowing.wasmer.app')">
+                <img src="https://alexander-datskov.github.io/1.12-eaglercraftx/favicon.png" alt="Eaglercraft 1.12 WASM-GC">
+                <p>Minecraft 1.12</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/drive_mad/index.html')">
+                <img src="https://play-lh.googleusercontent.com/V_egAxch0phxs10H_Z1QpWRrsH4phd8egT_5ZjYlFbXzXvwpUGpmJMn2h6HgbGkSlZSM" alt="Drive Mad">
+                <p>Drive Mad</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/ragdoll_archers/index.html')">
+                <img src="https://play-lh.googleusercontent.com/XMiWEMPbuq13oVcwYQ6ySLtZnBf7WpJ3rb7v-TM4MdFOvWfo1Z2hzSEAApRXzEcshjY" alt="Ragdoll Archers">
+                <p>Ragdoll Archers</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/steal_a_brainrot_2/index.html')">
+                <img src="https://play-lh.googleusercontent.com/iR1JNfTr0W_fDN8zAfuZYPYHdVjI1UzNSVFkbAyXwN8e3jEuKsyu73zqjVdHDxNEfQqLhC78EaPzZPtWNL-X" alt="Steal A Brainrot">
+                <p>Steal A Brainrot</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/buckshot_roulette/index.html')">
+                <img src="https://i.ytimg.com/vi/hGIG6hKEHI0/hqdefault.jpg" alt="Buckshot Roulette">
+                <p>Buckshot Roulette</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/gladihoppers/index.html')">
+                <img src="https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/gladi-hoppers.webp" alt="Gladihoppers">
+                <p>Gladihoppers</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/dune/index.html')">
+                <img src="https://cyberscore.me.uk/uploads/boxarts/29ece470dffb95f7d71a456cc7d09847ffcd135b99a903eb11e48f31737537e7" alt="Dune">
+                <p>Dune</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/granny/index.html')">
+                <img src="https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/granny.webp" alt="Granny">
+                <p>Granny</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/retro_bowl/index.html')">
+                <img src="https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/retro_bowl_icon.webp" alt="Retro Bowl">
+                <p>Retro Bowl</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/pvz/index.html')">
+                <img src="https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/pvz.webp" alt="Plants vs Zombies">
+                <p>Plants vs Zombies</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/clash_royale/index.html')">
+                <img src="https://play-lh.googleusercontent.com/gnSC6s8-6Tjc4uhvDW7nfrSJxpbhllzYhgX8y374N1LYvWBStn2YhozS9XXaz1T_Pi2q" alt="Clash Royale">
+                <p>Clash Royale</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/grow_a_garden/index.html')">
+                <img src="https://tse4.mm.bing.net/th/id/OIP.Ypa2emBTNGLNqI-GCcOTVwHaHa?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Grow A Garden">
+                <p>Grow A Garden</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/doom_1/index.html')">
+                <img src="https://tse3.mm.bing.net/th/id/OIP.pCsxsLOZPs3R50v8u9utIAHaHa?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Doom 1">
+                <p>Doom 1</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/cod_zombies_portable/index.html')">
+                <img src="https://img.itch.zone/aW1nLzE1ODIwNTg2LmpwZWc=/347x500/HFlGj%2F.jpeg" alt="Cod Zombies Portable">
+                <p>Cod Zombies Portable</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/flappy_bird/index.html')">
+                <img src="https://upload.wikimedia.org/wikipedia/en/thumb/0/0a/Flappy_Bird_icon.png/250px-Flappy_Bird_icon.png" alt="Flappy Bird">
+                <p>Flappy Bird</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/blocky_puzzle/index.html')">
+                <img src="https://tse2.mm.bing.net/th/id/OIP.PaWvrNBq1YV_cRtWPC_fAQHaDt?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Blocky Puzzle">
+                <p>Blocky Puzzle</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/level_devil/index.html')">
+                <img src="https://play-lh.googleusercontent.com/VqY_7ZNxG91KHaZguRP3khXdlTR1yQr45RCoiNu6MO41UhN-jlN31YWTQImWFRTw5r0" alt="Level Devil">
+                <p>Level Devil</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/idle_ants/index.html')">
+                <img src="https://tse2.mm.bing.net/th/id/OIP.7pxg2FH7po2AJTov3DK29gHaE-?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Idle Ants">
+                <p>Idle Ants</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/rocket_soccer_derby/index.html')">
+                <img src="https://tse1.mm.bing.net/th/id/OIP.klsiFaM8oq4FY0Xy6tgFdAHaEK?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Rocket Soccer Derby">
+                <p>Rocket Soccer Derby</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/fnaf/index.html')">
+                <img src="https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/fnaf.webp" alt="Five Nights at Freddy's">
+                <p>Five Nights at Freddy's</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/fnaf2/index.html')">
+                <img src="https://tse3.mm.bing.net/th/id/OIP.ubgUZW8mCKHtQkFRkmrjugHaEK?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Five Nights at Freddy's 2">
+                <p>Five Nights at Freddy's 2</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/fnaf3/index.html')">
+                <img src="https://th.bing.com/th/id/OIP.hu5L5v9bNtOztjb1cuii9QAAAA?o=7rm=3&amp;rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Five Nights at Freddy's 3">
+                <p>Five Nights at Freddy's 3</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/fnaf4/index.html')">
+                <img src="https://th.bing.com/th/id/OIP.NeBel8AXZVWzECeQPKymPgHaLH?o=7rm=3&amp;rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Five Nights at Freddy's 4">
+                <p>Five Nights at Freddy's 4</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/among_us/index.html')">
+                <img src="https://tse2.mm.bing.net/th/id/OIP.RZStwTG6egmUl_MLnuPWOgAAAA?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Among Us">
+                <p>Among Us</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/ovo/index.html')">
+                <img src="https://th.bing.com/th/id/OIP.0bg0p39bi_SAaj4_0aBXqQAAAA?o=7rm=3&amp;rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Ovo">
+                <p>Ovo</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/ovo_3d/index.html')">
+                <img src="https://tse3.mm.bing.net/th/id/OIP.Ha2A0mZ8tQs30byqjUe7dgAAAA?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Ovo 3D">
+                <p>Ovo 3D</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/golf_orbit/index.html')">
+                <img src="https://th.bing.com/th/id/OIP.c1oGt7rSoCuh1Dgun8C9uwHaEo?o=7rm=3&amp;rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Golf Orbit">
+                <p>Golf Orbit</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/holeio/index.html')">
+                <img src="https://tse1.mm.bing.net/th/id/OIP.Kf_fGqzBgXEGkUOcXxb1swHaEp?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Hole.io">
+                <p>Hole.io</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/retro_bowl_college/index.html')">
+                <img src="https://img.poki-cdn.com/cdn-cgi/image/quality=78,width=314,height=314,fit=cover,f=auto/d98547374c4129bf441b754d495e41aa.png" alt="Retro Bowl College">
+                <p>Retro Bowl College</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/crossy_road/index.html')">
+                <img src="https://tse3.mm.bing.net/th/id/OIP.J6SpCB39Qcq1_R_549HkuAHaEK?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Crossy Road">
+                <p>Crossy Road</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/pacman/index.html')">
+                <img src="https://tse1.mm.bing.net/th/id/OIP.UdWMHPLDo4YkUDQaQ6qWLgHaEK?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Pac-Man">
+                <p>Pac-Man</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/basketball_legends/index.html')">
+                <img src="https://tse1.mm.bing.net/th/id/OIP.ollyg9Yd7zX9DNtnkzsc-gHaEJ?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Basketball Legends">
+                <p>Basketball Legends</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/stickman_hook/index.html')">
+                <img src="https://tse4.mm.bing.net/th/id/OIP.sQ14jgEl4arBwdVbKU6jPQHaDt?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Stickman Hook">
+                <p>stick man hook</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/football_legends/index.html')">
+                <img src="https://tse2.mm.bing.net/th/id/OIP.Uj1NAnSPqXVhy_FB4WjztQHaE6?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Football Legends">
+                <p>Football Legends</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/football_bros/index.html')">
+                <img src="https://tse4.mm.bing.net/th/id/OIP.mHrpshy1jVrnBwPpelkBogHaFm?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Football Bros">
+                <p>Football Bros</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/baseball_bros/index.html')">
+                <img src="https://baseballbrosonline.com/baseball_bros.webp" alt="Baseball Bros">
+                <p>Baseball Bros</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/incredibox/index.html')">
+                <img src="https://tse1.mm.bing.net/th/id/OIP.OHLnUodkpgudeCKXD46q_AHaE8?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Incredibox">
+                <p>Incredibox</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/ragdoll_hit/index.html')">
+                <img src="https://play-lh.googleusercontent.com/pgyh6s739muPERP1IHMjk-IF2jR3T5ePVOn7YCWWzNl4KffphO8jf2yM2FtzagPEs4c" alt="Ragdoll Hit">
+                <p>Ragdoll Hit</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/funny_shooter_2/index.html')">
+                <img src="https://tse4.mm.bing.net/th/id/OIP.2Q8MOCpbH0KjJJiiPiosfgHaE8?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Funny Shooter 2">
+                <p>Funny Shooter 2</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/angry_birds_slingshot_frenzy/index.html')">
+                <img src="https://tse3.mm.bing.net/th/id/OIP.78D27BPgh-1OdwLjAuUNaQAAAA?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Angry Birds: Slingshot Frenzy">
+                <p>Angry Birds: Slingshot Frenzy</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/super_mario_bros/index.html')">
+                <img src="https://tse1.mm.bing.net/th/id/OIP.k2A_4WGUjMCTg8LVHitXpAHaEK?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Super Mario Bros">
+                <p>Super Mario Bros</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/jetpack_joyride/index.html')">
+                <img src="https://tse2.mm.bing.net/th/id/OIP.TacYklvbUR6Dlo2HB5wgIgHaEX?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Jetpack Joyride">
+                <p>Jetpack Joyride</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/deadly_descent/index.html')">
+                <img src="https://www.yoosfuhl.com/wp-content/uploads/2024/11/Deadly-Descent-game.jpg" alt="Deadly Descent">
+                <p>Deadly Descent</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/time_shooter_2/index.html')">
+                <img src="https://tse1.mm.bing.net/th/id/OIP.A9x_AIJ7AnHWagCQ6fbrmQHaE8?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Time Shooter 2">
+                <p>Time Shooter 2</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/wrestle_bros/index.html')">
+                <img src="https://tse2.mm.bing.net/th/id/OIP.sT6oGIXhzuEfDxxEAVX_8wHaD4?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Wrestle Bros">
+                <p>Wrestle Bros</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/cluster_rush/index.html')">
+                <img src="https://tse2.mm.bing.net/th/id/OIP.KsTBOwXuX8Xd3hTeTgkazAHaEJ?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Cluster Rush">
+                <p>Cluster Rush</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/helix_jump/index.html')">
+                <img src="https://tse2.mm.bing.net/th/id/OIP.mVlk-Fq5HwQrL8F6GvC_sQHaDt?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Helix Jump">
+                <p>Helix Jump</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/crazycattle3d/index.html')">
+                <img src="https://tse1.mm.bing.net/th/id/OIP.p30qwEtHztscp-8acW-jUAHaHz?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Crazy Cattle 3D">
+                <p>Crazy Cattle 3D</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/cookie_clicker/index.html')">
+                <img src="https://tse3.mm.bing.net/th/id/OIP.7AdJWAz2PPfduGAQvsXZiQHaEo?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Cookie Clicker">
+                <p>Cookie Clicker</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/arcane_archer/index.html')">
+                <img src="https://img.poki-cdn.com/cdn-cgi/image/quality=78,width=314,height=314,fit=cover,f=auto/b0969647f5a6a6ad4ecdbd64fd3eb9c6.jfif" alt="Arcane Archer">
+                <p>Arcane Archer</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/archer_master_3d_castle_defender/index.html')">
+                <img src="https://m.media-amazon.com/images/I/81m4VWbUg6L.png" alt="Archer Master 3D: Castle Defender">
+                <p>Archer Master 3D: Castle Defender</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/slope/index.html')">
+                <img src="https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/slope.webp" alt="Slope Game">
+                <p>Slope</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/tabs/index.html')">
+                <img src="https://tse3.mm.bing.net/th/id/OIP.Wn-irTAp75THDKGfCI7pwwHaEK?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Tabs Game">
+                <p>Tabs</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/portal_tfv/index.html')">
+                <img src="https://th.bing.com/th/id/R.45cd86008f2d878441ec2a207a0ff5db?rik=bGgFcBRKBE%2beOA&amp;pid=ImgRaw&amp;r=0" alt="Portal Game">
+                <p>Portal</p>
+            </div>
+            <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/bridge_race/index.html')">
+                <img src="https://play-lh.googleusercontent.com/ym7hOY7sjtsuZ-CR2tmvtsNEgPTkufUPKdaUKcNHOvJS3bf7CIxA7Eyc23FbnzziPsc" alt="Bridge Race">
+                <p>Bridge Race</p>
+            </div>
+            <div class="game-block" onclick="launchProtectedGame('./algebra/task/index.html')">
+                <img src="https://static.vecteezy.com/system/resources/thumbnails/006/692/321/small/chatting-message-icon-template-black-color-editable-chatting-message-icon-symbol-flat-illustration-for-graphic-and-web-design-free-vector.jpg" alt="Algebra Site">
+                <p>Cha†</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- In-Page Game Container Overlay -->
+    <div id="game-container">
+        <button id="back-btn" onclick="closeGame()">← Back</button>
+        <iframe id="game-frame" allowfullscreen></iframe>
+    </div>
+
+<script>
+    console.log("SCRIPT LOADED"); // proof the script is running
+
+    function launchGame(url) {
+        const container = document.getElementById('game-container');
+        const frame = document.getElementById('game-frame');
+        
+        frame.src = url;
+        container.style.display = 'block';
+    }
+
+    function closeGame() {
+        const container = document.getElementById('game-container');
+        const frame = document.getElementById('game-frame');
+        
+        container.style.display = 'none';
+        frame.src = '';
+    }
+
+    function launchProtectedGame(url) {
+        const password = prompt('Password:');
+        if (password === 'cinnamon29') {
+            launchGame(url);
+        }
+    }
+
+    // Leave confirmation
+    window.addEventListener('beforeunload', function (e) {
+        e.preventDefault();
+        e.returnValue = '';
+    });
+
+    window.onbeforeunload = function () {
+        return '';
+    };
+</script>
+</body>
+</html>

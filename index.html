@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="TaskFlow - Comprehensive Productivity Dashboard">
+    <meta name="theme-color" content="#0f0f17">
+    <title>TaskFlow Pro</title>
+    <style>
+        :root {
+            --bg: #0b0b12;
+            --surface: #151522;
+            --surface-light: #202033;
+            --primary: #9333ea;
+            --primary-hover: #7e22ce;
+            --primary-glow: rgba(147, 51, 234, 0.3);
+            --text-main: #f8fafc;
+            --text-muted: #64748b;
+            --border: #2a2a40;
+            
+            /* Priorities */
+            --p-high: #f43f5e;
+            --p-med: #f59e0b;
+            --p-low: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        aside {
+            width: 250px;
+            background-color: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 2rem 1rem;
+        }
+
+        .brand {
+            font-size: 1.5rem;
+            color: var(--primary);
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 3rem;
+            padding-left: 1rem;
+        }
+
+        .nav-item {
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            text-align: left;
+            padding: 1rem;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item:hover {
+            background-color: var(--surface-light);
+            color: var(--text-main);
+        }
+
+        .nav-item.active {
+            background-color: var(--primary-glow);
+            color: #d8b4fe;
+            border-left: 3px solid var(--primary);
+        }
+
+        /* Main Content */
+        main {
+            flex: 1;
+            padding: 3rem;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .view-section {
+            display: none;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .view-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            font-size: 0.95rem;
+        }
+
+        /* Form Controls */
+        .input-group { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; }
+        
+        input[type="text"], select, textarea {
+            background-color: var(--surface-light);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 0.85rem 1rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        
+        input[type="text"]:focus, select:focus, textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-glow);
+        }
+        
+        input[type="text"] { flex: 1; }
+
+        button.btn-primary {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.85rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        
+        button.btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        /* Task Specifics */
+        .task-list { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; }
+        .task-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1rem; border: 1px solid var(--border); border-radius: 10px;
+            background-color: var(--surface); transition: all 0.2s ease;
+        }
+        .task-item.completed { opacity: 0.5; text-decoration: line-through; }
+        .task-content { display: flex; align-items: center; gap: 1rem; flex: 1; }
+        .priority-badge { font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 12px; font-weight: 600; text-transform: uppercase; }
+        .priority-high { background-color: rgba(244, 63, 94, 0.15); color: var(--p-high); }
+        .priority-med { background-color: rgba(245, 158, 11, 0.15); color: var(--p-med); }
+        .priority-low { background-color: rgba(16, 185, 129, 0.15); color: var(--p-low); }
+        
+        .delete-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 0.5rem; border-radius: 6px; }
+        .delete-btn:hover { color: var(--p-high); background-color: rgba(244, 63, 94, 0.1); }
+
+        /* Timer Specifics */
+        .timer-container {
+            text-align: center;
+            background-color: var(--surface);
+            padding: 4rem 2rem;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+        .timer-display { font-size: 6rem; font-weight: 700; color: var(--primary); letter-spacing: -2px; margin-bottom: 2rem; font-variant-numeric: tabular-nums; }
+        .timer-controls { display: flex; gap: 1rem; justify-content: center; }
+        
+        /* Scratchpad Specifics */
+        .scratchpad-area {
+            width: 100%; height: 500px; resize: none;
+            padding: 1.5rem; font-family: monospace; line-height: 1.5;
+        }
+
+        /* Settings/Data Specifics */
+        .settings-card {
+            background-color: var(--surface); padding: 2rem; border-radius: 12px;
+            border: 1px solid var(--border); margin-bottom: 1rem;
+        }
+        .settings-card h3 { margin-bottom: 1rem; }
+
+        /* Super Subtle Footer */
+        footer {
+            position: fixed;
+            bottom: 8px;
+            right: 12px;
+            opacity: 0.1;
+            font-size: 0.65rem;
+            transition: opacity 0.3s ease;
+            z-index: 100;
+        }
+        footer:hover { opacity: 0.6; }
+        footer a, footer span { color: var(--text-main); text-decoration: none; margin-left: 8px; cursor: pointer; }
+
+        /* Overlay */
+        #overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #000; z-index: 9999; display: none; flex-direction: column;
+        }
+        #blank-iframe { width: 100%; height: 100%; border: none; background-color: white; }
+    </style>
+</head>
+<body>
+
+    <aside>
+        <div class="brand">TaskFlow Pro</div>
+        <nav>
+            <button class="nav-item active" data-target="view-tasks">📝 Tasks</button>
+            <button class="nav-item" data-target="view-timer">⏱️ Focus Timer</button>
+            <button class="nav-item" data-target="view-notes">🗒️ Scratchpad</button>
+            <button class="nav-item" data-target="view-data">💾 Data Sync</button>
+        </nav>
+    </aside>
+
+    <main>
+        <section id="view-tasks" class="view-section active">
+            <h2>Your Tasks</h2>
+            <p class="subtitle" id="task-stats">Manage your workflow</p>
+            
+            <form id="task-form" class="input-group">
+                <input type="text" id="task-input" placeholder="What needs to be done?" autocomplete="off" required>
+                <select id="task-priority">
+                    <option value="high">High Priority</option>
+                    <option value="med" selected>Med Priority</option>
+                    <option value="low">Low Priority</option>
+                </select>
+                <button type="submit" class="btn-primary">Add</button>
+            </form>
+            <ul id="task-list" class="task-list"></ul>
+        </section>
+
+        <section id="view-timer" class="view-section">
+            <h2>Focus Timer</h2>
+            <p class="subtitle">Use the Pomodoro technique to stay productive.</p>
+            
+            <div class="timer-container">
+                <div class="timer-display" id="timer-display">25:00</div>
+                <div class="timer-controls">
+                    <button class="btn-primary" id="timer-toggle">Start Focus</button>
+                    <button class="btn-primary" id="timer-reset" style="background-color: var(--surface-light); color: var(--text-main);">Reset</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-notes" class="view-section">
+            <h2>Scratchpad</h2>
+            <p class="subtitle">Auto-saving notes for quick thoughts and drafts.</p>
+            <textarea id="scratchpad" class="scratchpad-area" placeholder="Start typing here..."></textarea>
+        </section>
+
+        <section id="view-data" class="view-section">
+            <h2>Data Synchronization</h2>
+            <p class="subtitle">Export or import your TaskFlow data.</p>
+            
+            <div class="settings-card">
+                <h3>Export Data</h3>
+                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">Download all your tasks and notes as a secure JSON file.</p>
+                <button class="btn-primary" onclick="exportData()">Download Backup</button>
+            </div>
+
+            <div class="settings-card">
+                <h3>Import Data</h3>
+                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">Restore your data from a previous backup file.</p>
+                <div class="input-group">
+                    <input type="file" id="import-file" accept=".json" style="padding: 0.5rem;">
+                    <button class="btn-primary" onclick="importData()">Restore</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <span id="status-link">Status</span>
+    </footer>
+
+    <div id="overlay">
+        <iframe id="blank-iframe" src="about:blank"></iframe>
+    </div>
+
+    <script>
+        // --- Navigation Logic ---
+        const navItems = document.querySelectorAll('.nav-item');
+        const viewSections = document.querySelectorAll('.view-section');
+
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                navItems.forEach(n => n.classList.remove('active'));
+                viewSections.forEach(v => v.classList.remove('active'));
+                
+                item.classList.add('active');
+                document.getElementById(item.dataset.target).classList.add('active');
+            });
+        });
+
+        // --- Task Logic ---
+        const taskForm = document.getElementById('task-form');
+        const taskInput = document.getElementById('task-input');
+        const priorityInput = document.getElementById('task-priority');
+        const taskList = document.getElementById('task-list');
+        const taskStats = document.getElementById('task-stats');
+        
+        let tasks = JSON.parse(localStorage.getItem('taskflow_pro_tasks')) || [];
+
+        function renderTasks() {
+            taskList.innerHTML = '';
+            tasks.forEach((task, index) => {
+                const li = document.createElement('li');
+                li.className = `task-item ${task.completed ? 'completed' : ''}`;
+                li.innerHTML = `
+                    <div class="task-content">
+                        <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${index})">
+                        <span>${escapeHTML(task.text)}</span>
+                        <span class="priority-badge priority-${task.priority}">${task.priority}</span>
+                    </div>
+                    <button class="delete-btn" onclick="deleteTask(${index})">X</button>
+                `;
+                taskList.appendChild(li);
+            });
+            
+            const remaining = tasks.filter(t => !t.completed).length;
+            taskStats.textContent = `${remaining} task${remaining !== 1 ? 's' : ''} remaining`;
+            localStorage.setItem('taskflow_pro_tasks', JSON.stringify(tasks));
+        }
+
+        function addTask(e) {
+            e.preventDefault();
+            if (taskInput.value.trim()) {
+                tasks.unshift({ text: taskInput.value.trim(), priority: priorityInput.value, completed: false });
+                taskInput.value = '';
+                renderTasks();
+            }
+        }
+
+        window.toggleTask = index => { tasks[index].completed = !tasks[index].completed; renderTasks(); };
+        window.deleteTask = index => { tasks.splice(index, 1); renderTasks(); };
+        function escapeHTML(str) { return str.replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag] || tag)); }
+        
+        taskForm.addEventListener('submit', addTask);
+        renderTasks();
+
+        // --- Timer Logic ---
+        let timerInterval;
+        let timeLeft = 25 * 60; // 25 minutes
+        let timerRunning = false;
+        const timerDisplay = document.getElementById('timer-display');
+        const timerToggleBtn = document.getElementById('timer-toggle');
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const seconds = (timeLeft % 60).toString().padStart(2, '0');
+            timerDisplay.textContent = `${minutes}:${seconds}`;
+        }
+
+        timerToggleBtn.addEventListener('click', () => {
+            if (timerRunning) {
+                clearInterval(timerInterval);
+                timerToggleBtn.textContent = 'Resume Focus';
+            } else {
+                timerInterval = setInterval(() => {
+                    if (timeLeft > 0) { timeLeft--; updateTimerDisplay(); } 
+                    else { clearInterval(timerInterval); alert('Focus session complete!'); }
+                }, 1000);
+                timerToggleBtn.textContent = 'Pause Timer';
+            }
+            timerRunning = !timerRunning;
+        });
+
+        document.getElementById('timer-reset').addEventListener('click', () => {
+            clearInterval(timerInterval);
+            timerRunning = false;
+            timeLeft = 25 * 60;
+            timerToggleBtn.textContent = 'Start Focus';
+            updateTimerDisplay();
+        });
+
+        // --- Scratchpad Logic ---
+        const scratchpad = document.getElementById('scratchpad');
+        scratchpad.value = localStorage.getItem('taskflow_pro_notes') || '';
+        scratchpad.addEventListener('input', e => localStorage.setItem('taskflow_pro_notes', e.target.value));
+
+        // --- Data Sync Logic ---
+        window.exportData = function() {
+            const data = {
+                tasks: tasks,
+                notes: scratchpad.value
+            };
+            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `TaskFlow_Backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+
+        window.importData = function() {
+            const fileInput = document.getElementById('import-file');
+            if (!fileInput.files.length) return alert('Please select a file first.');
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.tasks) { tasks = imported.tasks; renderTasks(); }
+                    if (imported.notes !== undefined) { 
+                        scratchpad.value = imported.notes; 
+                        localStorage.setItem('taskflow_pro_notes', imported.notes);
+                    }
+                    alert('Data restored successfully!');
+                } catch (err) {
+                    alert('Error reading backup file. Make sure it is valid JSON.');
+                }
+            };
+            reader.readAsText(fileInput.files[0]);
+        };
+
+        // --- Overlay & Iframe Logic (Maintained exact behavior and hotkey) ---
+        const statusLink = document.getElementById('status-link');
+        const overlay = document.getElementById('overlay');
+        const blankIframe = document.getElementById('blank-iframe');
+
+        function closeOverlay() {
+            if (overlay.style.display === 'flex') {
+                overlay.style.display = 'none';
+                blankIframe.src = 'about:blank'; 
+            }
+        }
+
+        statusLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            overlay.style.display = 'flex';
+            alert('Press "\\" to close. The "\\" key is located right below the backspace button.');
+            
+            const iframeDoc = blankIframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0b0b12; }
+                        iframe { border: none; width: 100vw; height: 100vh; }
+                    </style>
+                </head>
+                <body>
+                    <iframe src="tasks.html"></iframe>
+                    <script>
+                        document.addEventListener('keydown', (e) => {
+                            if (e.key === '\\\\') {
+                                window.parent.postMessage('closeTaskflowOverlay', '*');
+                            }
+                        });
+                    <\/script>
+                </body>
+                </html>
+            `);
+            iframeDoc.close();
+        });
+
+        document.addEventListener('keydown', (e) => { if (e.key === '\\') closeOverlay(); });
+        window.addEventListener('message', (e) => { if (e.data === 'closeTaskflowOverlay') closeOverlay(); });
+    </script>
+</body>
+</html>
