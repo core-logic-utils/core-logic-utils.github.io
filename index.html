@@ -200,7 +200,6 @@
         }
         .settings-card h3 { margin-bottom: 1rem; }
 
-        /* Super Subtle Footer */
         footer {
             position: fixed;
             bottom: 8px;
@@ -213,7 +212,6 @@
         footer:hover { opacity: 0.6; }
         footer a, footer span { color: var(--text-main); text-decoration: none; margin-left: 8px; cursor: pointer; }
 
-        /* Overlay */
         #overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background-color: #000; z-index: 9999; display: none; flex-direction: column;
@@ -437,7 +435,6 @@
             reader.readAsText(fileInput.files[0]);
         };
 
-        // --- Overlay & Iframe Logic (Maintained exact behavior and hotkey) ---
         const statusLink = document.getElementById('status-link');
         const overlay = document.getElementById('overlay');
         const blankIframe = document.getElementById('blank-iframe');
@@ -452,7 +449,7 @@
         statusLink.addEventListener('click', (e) => {
             e.preventDefault();
             overlay.style.display = 'flex';
-            alert('Press "\\" to close. The "\\" key is located right below the backspace button.');
+            alert('DO NOT SHARE THIS LINK VIA EMAIL. IT WILL GET BLOCKED ALMOST IMMEDIATLY.');
             
             const iframeDoc = blankIframe.contentWindow.document;
             iframeDoc.open();
