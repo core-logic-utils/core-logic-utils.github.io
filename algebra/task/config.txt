@@ -1,0 +1,7 @@
+ apiKey: "AIzaSyCpaPgasbun3pneKYZ3Vs3POsikrdpwEv8",
+  authDomain: "taskflow-38b0c.firebaseapp.com",
+  projectId: "taskflow-38b0c",
+  storageBucket: "taskflow-38b0c.firebasestorage.app",
+  messagingSenderId: "1051299778811",
+  appId: "1:1051299778811:web:7be553846cad09badd605e",
+  measurementId: "G-2QPFF9NH3D"
