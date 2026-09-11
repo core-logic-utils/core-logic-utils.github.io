@@ -3,809 +3,571 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="TaskFlow - Comprehensive Productivity Dashboard">
-    <meta name="theme-color" content="#0f0f17">
-    <title>TaskFlow Pro</title>
+    <title>TaskFlow</title>
+    <meta name="description" content="A streamlined productivity and organization tool designed for managing tasks, notes, and daily workflow.">
+    <meta name="keywords" content="productivity, tools, workflow, planner, dashboard, utilities, notes, tasks">
+    <meta property="og:title" content="TaskFlow — Your Daily Productivity Hub">
+    <meta property="og:description" content="A clean, fast, and useful tool for organizing tasks, notes, and personal workflow.">
+    <meta property="og:type" content="website">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        :root {
-            --bg: #0b0b12;
-            --surface: #151522;
-            --surface-light: #202033;
-            --primary: #9333ea;
-            --primary-hover: #7e22ce;
-            --primary-glow: rgba(147, 51, 234, 0.3);
-            --text-main: #f8fafc;
-            --text-muted: #64748b;
-            --border: #2a2a40;
-            
-            /* Priorities */
-            --p-high: #f43f5e;
-            --p-med: #f59e0b;
-            --p-low: #10b981;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        
         body {
-            background-color: var(--bg);
-            color: var(--text-main);
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* Sidebar */
-        aside {
-            width: 250px;
-            background-color: var(--surface);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            padding: 2rem 1rem;
-        }
-
-        .brand {
-            font-size: 1.5rem;
-            color: var(--primary);
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            margin-bottom: 3rem;
-            padding-left: 1rem;
-        }
-
-        .nav-item {
-            background: transparent;
-            color: var(--text-muted);
-            border: none;
-            text-align: left;
-            padding: 1rem;
-            font-size: 1rem;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .nav-item:hover {
-            background-color: var(--surface-light);
-            color: var(--text-main);
-        }
-
-        .nav-item.active {
-            background-color: var(--primary-glow);
-            color: #d8b4fe;
-            border-left: 3px solid var(--primary);
-        }
-
-        /* Main Content */
-        main {
-            flex: 1;
-            padding: 3rem;
-            overflow-y: auto;
-            position: relative;
-        }
-
-        .view-section {
-            display: none;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .view-section.active {
-            display: block;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        h2 {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-            color: var(--text-main);
-        }
-
-        .subtitle {
-            color: var(--text-muted);
-            margin-bottom: 2.5rem;
-            font-size: 0.95rem;
-        }
-
-        /* Form Controls */
-        .input-group { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; }
-        
-        input[type="text"], select, textarea {
-            background-color: var(--surface-light);
-            color: var(--text-main);
-            border: 1px solid var(--border);
-            padding: 0.85rem 1rem;
-            border-radius: 8px;
-            font-size: 1rem;
-            outline: none;
-            transition: all 0.2s ease;
-        }
-        
-        input[type="text"]:focus, select:focus, textarea:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px var(--primary-glow);
-        }
-        
-        input[type="text"] { flex: 1; }
-
-        button.btn-primary {
-            background-color: var(--primary);
+            margin: 0;
+            background: #0a0a0a;
+            font-family: 'Inter', sans-serif;
             color: white;
-            border: none;
-            padding: 0.85rem 1.5rem;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s ease;
-        }
-        
-        button.btn-primary:hover {
-            background-color: var(--primary-hover);
+            overflow-x: hidden;
         }
 
-        /* Task Specifics */
-        .task-list { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; }
-        .task-item {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 1rem; border: 1px solid var(--border); border-radius: 10px;
-            background-color: var(--surface); transition: all 0.2s ease;
-        }
-        .task-item.completed { opacity: 0.5; text-decoration: line-through; }
-        .task-content { display: flex; align-items: center; gap: 1rem; flex: 1; }
-        .priority-badge { font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 12px; font-weight: 600; text-transform: uppercase; }
-        .priority-high { background-color: rgba(244, 63, 94, 0.15); color: var(--p-high); }
-        .priority-med { background-color: rgba(245, 158, 11, 0.15); color: var(--p-med); }
-        .priority-low { background-color: rgba(16, 185, 129, 0.15); color: var(--p-low); }
-        
-        .delete-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 0.5rem; border-radius: 6px; }
-        .delete-btn:hover { color: var(--p-high); background-color: rgba(244, 63, 94, 0.1); }
-
-        /* Timer Specifics */
-        .timer-container {
-            text-align: center;
-            background-color: var(--surface);
-            padding: 4rem 2rem;
-            border-radius: 16px;
-            border: 1px solid var(--border);
-        }
-        .timer-display { font-size: 6rem; font-weight: 700; color: var(--primary); letter-spacing: -2px; margin-bottom: 2rem; font-variant-numeric: tabular-nums; }
-        .timer-controls { display: flex; gap: 1rem; justify-content: center; }
-        
-        /* Scratchpad Specifics */
-        .scratchpad-area {
-            width: 100%; height: 500px; resize: none;
-            padding: 1.5rem; font-family: monospace; line-height: 1.5;
-        }
-
-        /* Settings/Data Specifics */
-        .settings-card {
-            background-color: var(--surface); padding: 2rem; border-radius: 12px;
-            border: 1px solid var(--border); margin-bottom: 1rem;
-        }
-        .settings-card h3 { margin-bottom: 1rem; }
-
-        /* Typing Test Specifics */
-        .typing-container {
-            background-color: var(--surface);
-            padding: 2rem;
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            cursor: text;
-        }
-        .typing-top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-        .typing-timer {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary);
-            font-variant-numeric: tabular-nums;
-        }
-        .words-display {
-            font-family: monospace;
-            font-size: 1.35rem;
-            line-height: 2.4rem;
-            max-height: 7.2rem;
-            overflow: hidden;
-            color: var(--text-muted);
-            margin-bottom: 1.5rem;
-            user-select: none;
-        }
-        .words-display .word {
-            margin-right: 0.55rem;
-            display: inline-block;
-        }
-        .words-display .word.current {
-            border-bottom: 2px solid var(--primary);
-        }
-        .words-display .letter.pending { color: var(--text-muted); }
-        .words-display .letter.correct { color: var(--text-main); }
-        .words-display .letter.incorrect { color: var(--p-high); text-decoration: underline; }
-
-        .typing-hidden-input {
-            width: 100%;
-            background-color: var(--surface-light);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            padding: 0.85rem 1rem;
-            border-radius: 8px;
-            font-size: 1rem;
-            outline: none;
-            font-family: monospace;
-        }
-        .typing-hidden-input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px var(--primary-glow);
-        }
-        .typing-hidden-input:disabled { opacity: 0.4; }
-
-        .typing-results {
-            background-color: var(--surface);
-            padding: 2.5rem;
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            text-align: center;
-        }
-        .result-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .result-box {
-            background-color: var(--surface-light);
-            padding: 1.5rem 1rem;
-            border-radius: 12px;
-        }
-        .result-value {
-            font-size: 2.2rem;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 0.25rem;
-            font-variant-numeric: tabular-nums;
-        }
-        .result-label {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        footer {
+        /* Interactive background canvas */
+        #bg-canvas {
             position: fixed;
-            bottom: 8px;
-            right: 12px;
-            opacity: 0.1;
-            font-size: 0.65rem;
-            transition: opacity 0.3s ease;
-            z-index: 100;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
         }
-        footer:hover { opacity: 0.6; }
-        footer a, footer span { color: var(--text-main); text-decoration: none; margin-left: 8px; cursor: pointer; }
 
-        #overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background-color: #000; z-index: 9999; display: none; flex-direction: column;
+        .content-wrapper {
+            position: relative;
+            z-index: 1;
         }
-        #blank-iframe { width: 100%; height: 100%; border: none; background-color: white; }
+        
+        .game-block {
+            background: #1a1a1a;
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid #27272a;
+            backdrop-filter: blur(4px);
+        }
+        
+        .game-block:hover {
+            transform: translateY(-8px) scale(1.03);
+            border-color: #22c55e;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5);
+        }
+        
+        .game-block img {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.4s ease;
+        }
+        
+        .game-block:hover img {
+            transform: scale(1.08);
+        }
+        
+        .game-block p {
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 14px 8px;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        #overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #0a0a0a;
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        /* player container */
+        #game-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: black;
+            z-index: 9998;
+            display: none;
+        }
+        #game-frame {
+            border: none;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        #back-btn {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 9999;
+            background: rgba(255, 255, 255, 0.8);
+            color: black;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-family: sans-serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: none;
+            font-weight: 600;
+        }
+        #back-btn:hover {
+            background: rgba(255, 255, 255, 1);
+        }
     </style>
 </head>
 <body>
+    <!-- Interactive particle background -->
+    <canvas id="bg-canvas"></canvas>
 
-    <aside>
-        <div class="brand">TaskFlow Pro</div>
-        <nav>
-            <button class="nav-item active" data-target="view-tasks">📝 Tasks</button>
-            <button class="nav-item" data-target="view-timer">⏱️ Focus Timer</button>
-            <button class="nav-item" data-target="view-notes">🗒️ Scratchpad</button>
-            <button class="nav-item" data-target="view-data">💾 Data Sync</button>
-            <button class="nav-item" data-target="view-typing">⌨️ Typing Test</button>
-        </nav>
-    </aside>
-
-    <main>
-        <section id="view-tasks" class="view-section active">
-            <h2>Your Tasks</h2>
-            <p class="subtitle" id="task-stats">Manage your workflow</p>
+    <div class="content-wrapper">
+        <div class="max-w-7xl mx-auto px-6 py-10">
+            <h1 class="text-5xl font-bold tracking-tight mb-12 text-center">TaskFlow</h1>
             
-            <form id="task-form" class="input-group">
-                <input type="text" id="task-input" placeholder="What needs to be done?" autocomplete="off" required>
-                <select id="task-priority">
-                    <option value="high">High Priority</option>
-                    <option value="med" selected>Med Priority</option>
-                    <option value="low">Low Priority</option>
-                </select>
-                <button type="submit" class="btn-primary">Add</button>
-            </form>
-            <ul id="task-list" class="task-list"></ul>
-        </section>
-
-        <section id="view-timer" class="view-section">
-            <h2>Focus Timer</h2>
-            <p class="subtitle">Use the Pomodoro technique to stay productive.</p>
-            
-            <div class="timer-container">
-                <div class="timer-display" id="timer-display">25:00</div>
-                <div class="timer-controls">
-                    <button class="btn-primary" id="timer-toggle">Start Focus</button>
-                    <button class="btn-primary" id="timer-reset" style="background-color: var(--surface-light); color: var(--text-main);">Reset</button>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                <!-- TaskFlow -->
+                <div class="game-block" onclick="launchGame('./algebra/index.html')">
+                    <img src="https://static.vecteezy.com/system/resources/thumbnails/006/692/321/small/chatting-message-icon-template-black-color-editable-chatting-message-icon-symbol-flat-illustration-for-graphic-and-web-design-free-vector.jpg" alt="Algebra Site">
+                    <p>Cha†</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://learningalgebraof1.wasmer.app')">
+                    <img src="https://cdn-icons-png.flaticon.com/512/8911/8911291.png" alt="Br0wse">
+                    <p>br0wse</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://learningthealgebraof1.wasmer.app')">
+                    <img src="https://static.vecteezy.com/system/resources/previews/006/662/139/non_2x/artificial-intelligence-ai-processor-chip-icon-symbol-for-graphic-design-logo-web-site-social-media-mobile-app-ui-illustration-free-vector.jpg" alt="Al">
+                    <p>Al</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://network-nine-alpha.vercel.app/api/relay?url=https%3A%2F%2Fopen.spotify.com')">
+                    <img src="https://cdn-icons-png.flaticon.com/512/174/174872.png" alt="Spotify">
+                    <p>Spotify</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://umbrascript0.github.io/network-utils/index.html')">
+                    <img src="https://ih1.redbubble.net/image.5278972926.4485/flat,750x,075,f-pad,750x1000,f8f8f8.jpg" alt="ULTRAKILL">
+                    <p>ULTRAKILL</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/drift_boss/index.html')">
+                    <img src="https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/driftboss.webp" alt="Drift Boss">
+                    <p>Drift Boss</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/snow_rider_3d/index.html')">
+                    <img src="https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/snowrider3d.webp" alt="Snow Rider 3D">
+                    <p>Snow Rider 3D</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/race_survival_arena_king/index.html')">
+                    <img src="https://drift-hunters.io/data/image/game/race-survival-arena-king.png" alt="Race Survival Arena King">
+                    <p>Race Survival Arena King</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/gun_spin/index.html')">
+                    <img src="https://tse4.mm.bing.net/th/id/OIP.Bg7qEtTEG2VmtTWPoOmilgAAAA?w=300&amp;h=300&amp;rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Gun Spin">
+                    <p>Gun Spin</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/minecraft/index.html')">
+                    <img src="https://images.icon-icons.com/2699/PNG/512/minecraft_logo_icon_168974.png" alt="Minecraft">
+                    <p>Minecraft</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://umbrascript0.github.io/network-utility')">
+                    <img src="https://alexander-datskov.github.io/1.12-eaglercraftx/favicon.png" alt="Eaglercraft 1.12 WASM-GC">
+                    <p>Minecraft 1.12</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/drive_mad/index.html')">
+                    <img src="https://play-lh.googleusercontent.com/V_egAxch0phxs10H_Z1QpWRrsH4phd8egT_5ZjYlFbXzXvwpUGpmJMn2h6HgbGkSlZSM" alt="Drive Mad">
+                    <p>Drive Mad</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/ragdoll_archers/index.html')">
+                    <img src="https://play-lh.googleusercontent.com/XMiWEMPbuq13oVcwYQ6ySLtZnBf7WpJ3rb7v-TM4MdFOvWfo1Z2hzSEAApRXzEcshjY" alt="Ragdoll Archers">
+                    <p>Ragdoll Archers</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/steal_a_brainrot_2/index.html')">
+                    <img src="https://play-lh.googleusercontent.com/iR1JNfTr0W_fDN8zAfuZYPYHdVjI1UzNSVFkbAyXwN8e3jEuKsyu73zqjVdHDxNEfQqLhC78EaPzZPtWNL-X" alt="Steal A Brainrot">
+                    <p>Steal A Brainrot</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/buckshot_roulette/index.html')">
+                    <img src="https://i.ytimg.com/vi/hGIG6hKEHI0/hqdefault.jpg" alt="Buckshot Roulette">
+                    <p>Buckshot Roulette</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/gladihoppers/index.html')">
+                    <img src="https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/gladi-hoppers.webp" alt="Gladihoppers">
+                    <p>Gladihoppers</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/dune/index.html')">
+                    <img src="https://cyberscore.me.uk/uploads/boxarts/29ece470dffb95f7d71a456cc7d09847ffcd135b99a903eb11e48f31737537e7" alt="Dune">
+                    <p>Dune</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/granny/index.html')">
+                    <img src="https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/granny.webp" alt="Granny">
+                    <p>Granny</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/retro_bowl/index.html')">
+                    <img src="https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/retro_bowl_icon.webp" alt="Retro Bowl">
+                    <p>Retro Bowl</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/pvz/index.html')">
+                    <img src="https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/pvz.webp" alt="Plants vs Zombies">
+                    <p>Plants vs Zombies</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/clash_royale/index.html')">
+                    <img src="https://play-lh.googleusercontent.com/gnSC6s8-6Tjc4uhvDW7nfrSJxpbhllzYhgX8y374N1LYvWBStn2YhozS9XXaz1T_Pi2q" alt="Clash Royale">
+                    <p>Clash Royale</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/grow_a_garden/index.html')">
+                    <img src="https://tse4.mm.bing.net/th/id/OIP.Ypa2emBTNGLNqI-GCcOTVwHaHa?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Grow A Garden">
+                    <p>Grow A Garden</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/doom_1/index.html')">
+                    <img src="https://tse3.mm.bing.net/th/id/OIP.pCsxsLOZPs3R50v8u9utIAHaHa?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Doom 1">
+                    <p>Doom 1</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/cod_zombies_portable/index.html')">
+                    <img src="https://img.itch.zone/aW1nLzE1ODIwNTg2LmpwZWc=/347x500/HFlGj%2F.jpeg" alt="Cod Zombies Portable">
+                    <p>Cod Zombies Portable</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/flappy_bird/index.html')">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/thumb/0/0a/Flappy_Bird_icon.png/250px-Flappy_Bird_icon.png" alt="Flappy Bird">
+                    <p>Flappy Bird</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/blocky_puzzle/index.html')">
+                    <img src="https://tse2.mm.bing.net/th/id/OIP.PaWvrNBq1YV_cRtWPC_fAQHaDt?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Blocky Puzzle">
+                    <p>Blocky Puzzle</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/level_devil/index.html')">
+                    <img src="https://play-lh.googleusercontent.com/VqY_7ZNxG91KHaZguRP3khXdlTR1yQr45RCoiNu6MO41UhN-jlN31YWTQImWFRTw5r0" alt="Level Devil">
+                    <p>Level Devil</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/idle_ants/index.html')">
+                    <img src="https://tse2.mm.bing.net/th/id/OIP.7pxg2FH7po2AJTov3DK29gHaE-?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Idle Ants">
+                    <p>Idle Ants</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/rocket_soccer_derby/index.html')">
+                    <img src="https://tse1.mm.bing.net/th/id/OIP.klsiFaM8oq4FY0Xy6tgFdAHaEK?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Rocket Soccer Derby">
+                    <p>Rocket Soccer Derby</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/fnaf/index.html')">
+                    <img src="https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/fnaf.webp" alt="Five Nights at Freddy's">
+                    <p>Five Nights at Freddy's</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/fnaf2/index.html')">
+                    <img src="https://tse3.mm.bing.net/th/id/OIP.ubgUZW8mCKHtQkFRkmrjugHaEK?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Five Nights at Freddy's 2">
+                    <p>Five Nights at Freddy's 2</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/fnaf3/index.html')">
+                    <img src="https://th.bing.com/th/id/OIP.hu5L5v9bNtOztjb1cuii9QAAAA?o=7rm=3&amp;rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Five Nights at Freddy's 3">
+                    <p>Five Nights at Freddy's 3</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/fnaf4/index.html')">
+                    <img src="https://th.bing.com/th/id/OIP.NeBel8AXZVWzECeQPKymPgHaLH?o=7rm=3&amp;rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Five Nights at Freddy's 4">
+                    <p>Five Nights at Freddy's 4</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/among_us/index.html')">
+                    <img src="https://tse2.mm.bing.net/th/id/OIP.RZStwTG6egmUl_MLnuPWOgAAAA?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Among Us">
+                    <p>Among Us</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/ovo/index.html')">
+                    <img src="https://th.bing.com/th/id/OIP.0bg0p39bi_SAaj4_0aBXqQAAAA?o=7rm=3&amp;rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Ovo">
+                    <p>Ovo</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/ovo_3d/index.html')">
+                    <img src="https://tse3.mm.bing.net/th/id/OIP.Ha2A0mZ8tQs30byqjUe7dgAAAA?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Ovo 3D">
+                    <p>Ovo 3D</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/golf_orbit/index.html')">
+                    <img src="https://th.bing.com/th/id/OIP.c1oGt7rSoCuh1Dgun8C9uwHaEo?o=7rm=3&amp;rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Golf Orbit">
+                    <p>Golf Orbit</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/holeio/index.html')">
+                    <img src="https://tse1.mm.bing.net/th/id/OIP.Kf_fGqzBgXEGkUOcXxb1swHaEp?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Hole.io">
+                    <p>Hole.io</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/retro_bowl_college/index.html')">
+                    <img src="https://img.poki-cdn.com/cdn-cgi/image/quality=78,width=314,height=314,fit=cover,f=auto/d98547374c4129bf441b754d495e41aa.png" alt="Retro Bowl College">
+                    <p>Retro Bowl College</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/crossy_road/index.html')">
+                    <img src="https://tse3.mm.bing.net/th/id/OIP.J6SpCB39Qcq1_R_549HkuAHaEK?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Crossy Road">
+                    <p>Crossy Road</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/pacman/index.html')">
+                    <img src="https://tse1.mm.bing.net/th/id/OIP.UdWMHPLDo4YkUDQaQ6qWLgHaEK?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Pac-Man">
+                    <p>Pac-Man</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/basketball_legends/index.html')">
+                    <img src="https://tse1.mm.bing.net/th/id/OIP.ollyg9Yd7zX9DNtnkzsc-gHaEJ?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Basketball Legends">
+                    <p>Basketball Legends</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/stickman_hook/index.html')">
+                    <img src="https://tse4.mm.bing.net/th/id/OIP.sQ14jgEl4arBwdVbKU6jPQHaDt?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Stickman Hook">
+                    <p>stick man hook</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/football_legends/index.html')">
+                    <img src="https://tse2.mm.bing.net/th/id/OIP.Uj1NAnSPqXVhy_FB4WjztQHaE6?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Football Legends">
+                    <p>Football Legends</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/football_bros/index.html')">
+                    <img src="https://tse4.mm.bing.net/th/id/OIP.mHrpshy1jVrnBwPpelkBogHaFm?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Football Bros">
+                    <p>Football Bros</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/baseball_bros/index.html')">
+                    <img src="https://baseballbrosonline.com/baseball_bros.webp" alt="Baseball Bros">
+                    <p>Baseball Bros</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/incredibox/index.html')">
+                    <img src="https://tse1.mm.bing.net/th/id/OIP.OHLnUodkpgudeCKXD46q_AHaE8?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Incredibox">
+                    <p>Incredibox</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/ragdoll_hit/index.html')">
+                    <img src="https://play-lh.googleusercontent.com/pgyh6s739muPERP1IHMjk-IF2jR3T5ePVOn7YCWWzNl4KffphO8jf2yM2FtzagPEs4c" alt="Ragdoll Hit">
+                    <p>Ragdoll Hit</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/funny_shooter_2/index.html')">
+                    <img src="https://tse4.mm.bing.net/th/id/OIP.2Q8MOCpbH0KjJJiiPiosfgHaE8?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Funny Shooter 2">
+                    <p>Funny Shooter 2</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/angry_birds_slingshot_frenzy/index.html')">
+                    <img src="https://tse3.mm.bing.net/th/id/OIP.78D27BPgh-1OdwLjAuUNaQAAAA?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Angry Birds: Slingshot Frenzy">
+                    <p>Angry Birds: Slingshot Frenzy</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/super_mario_bros/index.html')">
+                    <img src="https://tse1.mm.bing.net/th/id/OIP.k2A_4WGUjMCTg8LVHitXpAHaEK?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Super Mario Bros">
+                    <p>Super Mario Bros</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/jetpack_joyride/index.html')">
+                    <img src="https://tse2.mm.bing.net/th/id/OIP.TacYklvbUR6Dlo2HB5wgIgHaEX?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Jetpack Joyride">
+                    <p>Jetpack Joyride</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/deadly_descent/index.html')">
+                    <img src="https://www.yoosfuhl.com/wp-content/uploads/2024/11/Deadly-Descent-game.jpg" alt="Deadly Descent">
+                    <p>Deadly Descent</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/time_shooter_2/index.html')">
+                    <img src="https://tse1.mm.bing.net/th/id/OIP.A9x_AIJ7AnHWagCQ6fbrmQHaE8?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Time Shooter 2">
+                    <p>Time Shooter 2</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/wrestle_bros/index.html')">
+                    <img src="https://tse2.mm.bing.net/th/id/OIP.sT6oGIXhzuEfDxxEAVX_8wHaD4?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Wrestle Bros">
+                    <p>Wrestle Bros</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/cluster_rush/index.html')">
+                    <img src="https://tse2.mm.bing.net/th/id/OIP.KsTBOwXuX8Xd3hTeTgkazAHaEJ?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Cluster Rush">
+                    <p>Cluster Rush</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/helix_jump/index.html')">
+                    <img src="https://tse2.mm.bing.net/th/id/OIP.mVlk-Fq5HwQrL8F6GvC_sQHaDt?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Helix Jump">
+                    <p>Helix Jump</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/crazycattle3d/index.html')">
+                    <img src="https://tse1.mm.bing.net/th/id/OIP.p30qwEtHztscp-8acW-jUAHaHz?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Crazy Cattle 3D">
+                    <p>Crazy Cattle 3D</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/cookie_clicker/index.html')">
+                    <img src="https://tse3.mm.bing.net/th/id/OIP.7AdJWAz2PPfduGAQvsXZiQHaEo?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Cookie Clicker">
+                    <p>Cookie Clicker</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/arcane_archer/index.html')">
+                    <img src="https://img.poki-cdn.com/cdn-cgi/image/quality=78,width=314,height=314,fit=cover,f=auto/b0969647f5a6a6ad4ecdbd64fd3eb9c6.jfif" alt="Arcane Archer">
+                    <p>Arcane Archer</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/archer_master_3d_castle_defender/index.html')">
+                    <img src="https://m.media-amazon.com/images/I/81m4VWbUg6L.png" alt="Archer Master 3D: Castle Defender">
+                    <p>Archer Master 3D: Castle Defender</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/slope/index.html')">
+                    <img src="https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/slope.webp" alt="Slope Game">
+                    <p>Slope</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/tabs/index.html')">
+                    <img src="https://tse3.mm.bing.net/th/id/OIP.Wn-irTAp75THDKGfCI7pwwHaEK?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Tabs Game">
+                    <p>Tabs</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/portal_tfv/index.html')">
+                    <img src="https://th.bing.com/th/id/R.45cd86008f2d878441ec2a207a0ff5db?rik=bGgFcBRKBE%2beOA&amp;pid=ImgRaw&amp;r=0" alt="Portal Game">
+                    <p>Portal</p>
+                </div>
+                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/bridge_race/index.html')">
+                    <img src="https://play-lh.googleusercontent.com/ym7hOY7sjtsuZ-CR2tmvtsNEgPTkufUPKdaUKcNHOvJS3bf7CIxA7Eyc23FbnzziPsc" alt="Bridge Race">
+                    <p>Bridge Race</p>
+                </div>
+                <div class="game-block" onclick="launchProtectedGame('./algebra/task/index.html')">
+                    <img src="https://static.vecteezy.com/system/resources/thumbnails/006/692/321/small/chatting-message-icon-template-black-color-editable-chatting-message-icon-symbol-flat-illustration-for-graphic-and-web-design-free-vector.jpg" alt="Algebra Site">
+                    <p>Cha†</p>
                 </div>
             </div>
-        </section>
-
-        <section id="view-notes" class="view-section">
-            <h2>Scratchpad</h2>
-            <p class="subtitle">Auto-saving notes for quick thoughts and drafts.</p>
-            <textarea id="scratchpad" class="scratchpad-area" placeholder="Start typing here..."></textarea>
-        </section>
-
-        <section id="view-data" class="view-section">
-            <h2>Data Synchronization</h2>
-            <p class="subtitle">Export or import your TaskFlow data.</p>
-            
-            <div class="settings-card">
-                <h3>Export Data</h3>
-                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">Download all your tasks and notes as a secure JSON file.</p>
-                <button class="btn-primary" onclick="exportData()">Download Backup</button>
-            </div>
-
-            <div class="settings-card">
-                <h3>Import Data</h3>
-                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">Restore your data from a previous backup file.</p>
-                <div class="input-group">
-                    <input type="file" id="import-file" accept=".json" style="padding: 0.5rem;">
-                    <button class="btn-primary" onclick="importData()">Restore</button>
-                </div>
-            </div>
-        </section>
-
-        <section id="view-typing" class="view-section">
-            <h2>Typing Test</h2>
-            <p class="subtitle">Type as many words as you can in 30 seconds.</p>
-
-            <div class="typing-container" id="typing-container">
-                <div class="typing-top-bar">
-                    <div class="typing-timer" id="typing-timer">30s</div>
-                    <button class="btn-primary" id="typing-redo" style="background-color: var(--surface-light); color: var(--text-main);">↻ Restart</button>
-                </div>
-                <div class="words-display" id="words-display"></div>
-                <input type="text" id="typing-input" class="typing-hidden-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Start typing to begin...">
-            </div>
-
-            <div class="typing-results" id="typing-results" style="display:none;">
-                <div class="result-grid">
-                    <div class="result-box">
-                        <div class="result-value" id="result-wpm">0</div>
-                        <div class="result-label">WPM</div>
-                    </div>
-                    <div class="result-box">
-                        <div class="result-value" id="result-raw">0</div>
-                        <div class="result-label">Raw WPM</div>
-                    </div>
-                    <div class="result-box">
-                        <div class="result-value" id="result-accuracy">0%</div>
-                        <div class="result-label">Accuracy</div>
-                    </div>
-                    <div class="result-box">
-                        <div class="result-value" id="result-chars">0/0</div>
-                        <div class="result-label">Correct / Wrong</div>
-                    </div>
-                </div>
-                <button class="btn-primary" id="typing-redo-2">Try Again</button>
-            </div>
-        </section>
-    </main>
-
-    <footer>
-        <a href="#">Privacy</a>
-        <a href="#">Terms</a>
-        <span id="status-link">Status</span>
-    </footer>
-
-    <div id="overlay">
-        <iframe id="blank-iframe" src="about:blank"></iframe>
+        </div>
     </div>
 
-    <script>
-        // --- Navigation Logic ---
-        const navItems = document.querySelectorAll('.nav-item');
-        const viewSections = document.querySelectorAll('.view-section');
+    <!-- In-Page Game Container Overlay -->
+    <div id="game-container">
+        <button id="back-btn" onclick="closeGame()">← Back</button>
+        <iframe id="game-frame" allowfullscreen></iframe>
+    </div>
 
-        navItems.forEach(item => {
-            item.addEventListener('click', () => {
-                navItems.forEach(n => n.classList.remove('active'));
-                viewSections.forEach(v => v.classList.remove('active'));
-                
-                item.classList.add('active');
-                document.getElementById(item.dataset.target).classList.add('active');
+<script>
+    console.log("SCRIPT LOADED");
 
-                if (item.dataset.target === 'view-typing') {
-                    resetTypingTest();
+    // ========== INTERACTIVE PARTICLE BACKGROUND ==========
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let mouse = { x: null, y: null, radius: 120 };
+    let animationId;
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+
+    class Particle {
+        constructor() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.size = Math.random() * 2.2 + 0.8;
+            this.baseX = this.x;
+            this.baseY = this.y;
+            this.density = Math.random() * 25 + 8;
+            this.vx = (Math.random() - 0.5) * 0.4;
+            this.vy = (Math.random() - 0.5) * 0.4;
+            this.color = `rgba(34, 197, 94, ${Math.random() * 0.5 + 0.25})`; // soft green to match hover
+        }
+
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+        }
+
+        update() {
+            // gentle continuous drift
+            this.x += this.vx;
+            this.y += this.vy;
+
+            // wrap around edges
+            if (this.x < 0) this.x = canvas.width;
+            if (this.x > canvas.width) this.x = 0;
+            if (this.y < 0) this.y = canvas.height;
+            if (this.y > canvas.height) this.y = 0;
+
+            // mouse interaction
+            if (mouse.x !== null) {
+                const dx = mouse.x - this.x;
+                const dy = mouse.y - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < mouse.radius) {
+                    const force = (mouse.radius - distance) / mouse.radius;
+                    const forceX = (dx / distance) * force * this.density * 0.35;
+                    const forceY = (dy / distance) * force * this.density * 0.35;
+                    this.x -= forceX;
+                    this.y -= forceY;
                 }
-            });
-        });
+            }
+        }
+    }
 
-        // --- Task Logic ---
-        const taskForm = document.getElementById('task-form');
-        const taskInput = document.getElementById('task-input');
-        const priorityInput = document.getElementById('task-priority');
-        const taskList = document.getElementById('task-list');
-        const taskStats = document.getElementById('task-stats');
+    function initParticles() {
+        particles = [];
+        const numberOfParticles = Math.min(Math.floor((canvas.width * canvas.height) / 9000), 140);
+        for (let i = 0; i < numberOfParticles; i++) {
+            particles.push(new Particle());
+        }
+    }
+
+    function connectParticles() {
+        const maxDistance = 110;
+        for (let a = 0; a < particles.length; a++) {
+            for (let b = a + 1; b < particles.length; b++) {
+                const dx = particles[a].x - particles[b].x;
+                const dy = particles[a].y - particles[b].y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < maxDistance) {
+                    const opacity = 1 - (distance / maxDistance);
+                    ctx.strokeStyle = `rgba(34, 197, 94, ${opacity * 0.18})`;
+                    ctx.lineWidth = 0.8;
+                    ctx.beginPath();
+                    ctx.moveTo(particles[a].x, particles[a].y);
+                    ctx.lineTo(particles[b].x, particles[b].y);
+                    ctx.stroke();
+                }
+            }
+        }
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // very subtle dark overlay so particles stay soft
+        ctx.fillStyle = 'rgba(10, 10, 10, 0.15)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        particles.forEach(p => {
+            p.update();
+            p.draw();
+        });
+        connectParticles();
+
+        animationId = requestAnimationFrame(animate);
+    }
+
+    // mouse tracking
+    window.addEventListener('mousemove', (e) => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+    });
+
+    window.addEventListener('mouseout', () => {
+        mouse.x = null;
+        mouse.y = null;
+    });
+
+    window.addEventListener('resize', () => {
+        resizeCanvas();
+        initParticles();
+    });
+
+    // start background
+    resizeCanvas();
+    initParticles();
+    animate();
+
+    // ========== ORIGINAL GAME LOGIC ==========
+    function launchGame(url) {
+        const container = document.getElementById('game-container');
+        const frame = document.getElementById('game-frame');
         
-        let tasks = JSON.parse(localStorage.getItem('taskflow_pro_tasks')) || [];
+        frame.src = url;
+        container.style.display = 'block';
+    }
 
-        function renderTasks() {
-            taskList.innerHTML = '';
-            tasks.forEach((task, index) => {
-                const li = document.createElement('li');
-                li.className = `task-item ${task.completed ? 'completed' : ''}`;
-                li.innerHTML = `
-                    <div class="task-content">
-                        <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${index})">
-                        <span>${escapeHTML(task.text)}</span>
-                        <span class="priority-badge priority-${task.priority}">${task.priority}</span>
-                    </div>
-                    <button class="delete-btn" onclick="deleteTask(${index})">X</button>
-                `;
-                taskList.appendChild(li);
-            });
-            
-            const remaining = tasks.filter(t => !t.completed).length;
-            taskStats.textContent = `${remaining} task${remaining !== 1 ? 's' : ''} remaining`;
-            localStorage.setItem('taskflow_pro_tasks', JSON.stringify(tasks));
-        }
-
-        function addTask(e) {
-            e.preventDefault();
-            if (taskInput.value.trim()) {
-                tasks.unshift({ text: taskInput.value.trim(), priority: priorityInput.value, completed: false });
-                taskInput.value = '';
-                renderTasks();
-            }
-        }
-
-        window.toggleTask = index => { tasks[index].completed = !tasks[index].completed; renderTasks(); };
-        window.deleteTask = index => { tasks.splice(index, 1); renderTasks(); };
-        function escapeHTML(str) { return str.replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag] || tag)); }
+    function closeGame() {
+        const container = document.getElementById('game-container');
+        const frame = document.getElementById('game-frame');
         
-        taskForm.addEventListener('submit', addTask);
-        renderTasks();
+        container.style.display = 'none';
+        frame.src = '';
+    }
 
-        // --- Timer Logic ---
-        let timerInterval;
-        let timeLeft = 25 * 60; // 25 minutes
-        let timerRunning = false;
-        const timerDisplay = document.getElementById('timer-display');
-        const timerToggleBtn = document.getElementById('timer-toggle');
-
-        function updateTimerDisplay() {
-            const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-            const seconds = (timeLeft % 60).toString().padStart(2, '0');
-            timerDisplay.textContent = `${minutes}:${seconds}`;
+    function launchProtectedGame(url) {
+        const password = prompt('Password:');
+        if (password === 'cinnamon29') {
+            launchGame(url);
         }
+    }
 
-        timerToggleBtn.addEventListener('click', () => {
-            if (timerRunning) {
-                clearInterval(timerInterval);
-                timerToggleBtn.textContent = 'Resume Focus';
-            } else {
-                timerInterval = setInterval(() => {
-                    if (timeLeft > 0) { timeLeft--; updateTimerDisplay(); } 
-                    else { clearInterval(timerInterval); alert('Focus session complete!'); }
-                }, 1000);
-                timerToggleBtn.textContent = 'Pause Timer';
-            }
-            timerRunning = !timerRunning;
-        });
-
-        document.getElementById('timer-reset').addEventListener('click', () => {
-            clearInterval(timerInterval);
-            timerRunning = false;
-            timeLeft = 25 * 60;
-            timerToggleBtn.textContent = 'Start Focus';
-            updateTimerDisplay();
-        });
-
-        // --- Scratchpad Logic ---
-        const scratchpad = document.getElementById('scratchpad');
-        scratchpad.value = localStorage.getItem('taskflow_pro_notes') || '';
-        scratchpad.addEventListener('input', e => localStorage.setItem('taskflow_pro_notes', e.target.value));
-
-        // --- Data Sync Logic ---
-        window.exportData = function() {
-            const data = {
-                tasks: tasks,
-                notes: scratchpad.value
-            };
-            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `TaskFlow_Backup_${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        };
-
-        window.importData = function() {
-            const fileInput = document.getElementById('import-file');
-            if (!fileInput.files.length) return alert('Please select a file first.');
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const imported = JSON.parse(e.target.result);
-                    if (imported.tasks) { tasks = imported.tasks; renderTasks(); }
-                    if (imported.notes !== undefined) { 
-                        scratchpad.value = imported.notes; 
-                        localStorage.setItem('taskflow_pro_notes', imported.notes);
-                    }
-                    alert('Data restored successfully!');
-                } catch (err) {
-                    alert('Error reading backup file. Make sure it is valid JSON.');
-                }
-            };
-            reader.readAsText(fileInput.files[0]);
-        };
-
-        // --- Typing Test Logic ---
-        const WORD_BANK = [
-            "time","person","year","way","day","thing","man","world","life","hand",
-            "part","child","eye","place","work","week","case","point","number","group",
-            "problem","fact","water","room","area","money","story","month","lot","right",
-            "study","book","word","business","issue","side","kind","head","house","service",
-            "friend","father","power","hour","game","line","end","member","law","car",
-            "city","community","name","team","minute","idea","body","information","back","parent",
-            "face","level","office","door","health","art","war","history","party","result",
-            "change","morning","reason","research","girl","guy","moment","air","teacher","force",
-            "education","light","night","dark","open","close","fast","slow","simple","strong",
-            "quiet","happy","sunny","music","paper","table","chair","window","garden","river",
-            "mountain","forest","ocean","cloud","stone","bridge","street","market","coffee","dinner",
-            "kitchen","bottle","pocket","journey","silence","sunrise","sunset","winter","summer","autumn",
-            "spring","yellow","purple","orange","silver","golden","bright","gentle","brave","clever"
-        ];
-
-        function generateWordList(n) {
-            const arr = [];
-            for (let i = 0; i < n; i++) {
-                arr.push(WORD_BANK[Math.floor(Math.random() * WORD_BANK.length)]);
-            }
-            return arr;
-        }
-
-        const wordsDisplay = document.getElementById('words-display');
-        const typingInput = document.getElementById('typing-input');
-        const typingTimerDisplay = document.getElementById('typing-timer');
-        const typingContainer = document.getElementById('typing-container');
-        const typingResults = document.getElementById('typing-results');
-
-        let typingWords = [];
-        let typingWordIndex = 0;
-        let typingCorrectChars = 0;
-        let typingIncorrectChars = 0;
-        let typingTotalTypedChars = 0;
-        let typingTimeLeft = 30;
-        let typingStarted = false;
-        let typingEnded = false;
-        let typingCountdown = null;
-
-        function renderTypingWords() {
-            wordsDisplay.innerHTML = '';
-            typingWords.forEach((word, wi) => {
-                const wordSpan = document.createElement('span');
-                wordSpan.className = 'word' + (wi === typingWordIndex ? ' current' : '');
-                wordSpan.id = 'tw-' + wi;
-                for (const ch of word) {
-                    const letterSpan = document.createElement('span');
-                    letterSpan.className = 'letter pending';
-                    letterSpan.textContent = ch;
-                    wordSpan.appendChild(letterSpan);
-                }
-                wordsDisplay.appendChild(wordSpan);
-            });
-        }
-
-        function scoreTypedWord(typed, target) {
-            let correct = 0, incorrect = 0;
-            const maxLen = Math.max(typed.length, target.length);
-            for (let i = 0; i < maxLen; i++) {
-                if (i < typed.length && typed[i] === target[i]) correct++;
-                else incorrect++;
-            }
-            return { correct, incorrect };
-        }
-
-        function updateCurrentTypingWord(typedVal) {
-            const wordSpan = document.getElementById('tw-' + typingWordIndex);
-            if (!wordSpan) return;
-            const target = typingWords[typingWordIndex] || '';
-            const letters = wordSpan.querySelectorAll('.letter:not(.extra)');
-            letters.forEach((letterEl, i) => {
-                if (i < typedVal.length) {
-                    letterEl.className = 'letter ' + (typedVal[i] === target[i] ? 'correct' : 'incorrect');
-                } else {
-                    letterEl.className = 'letter pending';
-                }
-            });
-            const existingExtra = wordSpan.querySelector('.extra');
-            if (existingExtra) existingExtra.remove();
-            if (typedVal.length > target.length) {
-                const extraSpan = document.createElement('span');
-                extraSpan.className = 'letter incorrect extra';
-                extraSpan.textContent = typedVal.slice(target.length);
-                wordSpan.appendChild(extraSpan);
-            }
-        }
-
-        function completeTypingWord(typedVal) {
-            const target = typingWords[typingWordIndex];
-            const { correct, incorrect } = scoreTypedWord(typedVal, target);
-            typingCorrectChars += correct;
-            typingIncorrectChars += incorrect;
-            typingTotalTypedChars += typedVal.length;
-            updateCurrentTypingWord(typedVal);
-
-            const prevSpan = document.getElementById('tw-' + typingWordIndex);
-            if (prevSpan) prevSpan.classList.remove('current');
-
-            typingWordIndex++;
-            const nextSpan = document.getElementById('tw-' + typingWordIndex);
-            if (nextSpan) {
-                nextSpan.classList.add('current');
-                nextSpan.scrollIntoView({ block: 'center' });
-            }
-        }
-
-        function startTypingTimer() {
-            typingStarted = true;
-            typingCountdown = setInterval(() => {
-                typingTimeLeft--;
-                typingTimerDisplay.textContent = typingTimeLeft + 's';
-                if (typingTimeLeft <= 0) {
-                    clearInterval(typingCountdown);
-                    finalizeTypingTest();
-                }
-            }, 1000);
-        }
-
-        function finalizeTypingTest() {
-            if (typingEnded) return;
-            typingEnded = true;
-            typingInput.disabled = true;
-
-            const partial = typingInput.value;
-            if (partial.length > 0) {
-                const target = typingWords[typingWordIndex] || '';
-                const { correct, incorrect } = scoreTypedWord(partial, target);
-                typingCorrectChars += correct;
-                typingIncorrectChars += incorrect;
-                typingTotalTypedChars += partial.length;
-            }
-
-            const minutes = 30 / 60;
-            const wpm = Math.round((typingCorrectChars / 5) / minutes);
-            const rawWpm = Math.round((typingTotalTypedChars / 5) / minutes);
-            const accuracy = typingTotalTypedChars > 0
-                ? Math.round((typingCorrectChars / typingTotalTypedChars) * 100)
-                : 100;
-
-            document.getElementById('result-wpm').textContent = wpm;
-            document.getElementById('result-raw').textContent = rawWpm;
-            document.getElementById('result-accuracy').textContent = accuracy + '%';
-            document.getElementById('result-chars').textContent = typingCorrectChars + '/' + typingIncorrectChars;
-
-            typingContainer.style.display = 'none';
-            typingResults.style.display = 'block';
-        }
-
-        function resetTypingTest() {
-            clearInterval(typingCountdown);
-            typingWords = generateWordList(150);
-            typingWordIndex = 0;
-            typingCorrectChars = 0;
-            typingIncorrectChars = 0;
-            typingTotalTypedChars = 0;
-            typingTimeLeft = 30;
-            typingStarted = false;
-            typingEnded = false;
-
-            typingTimerDisplay.textContent = '30s';
-            typingInput.value = '';
-            typingInput.disabled = false;
-
-            renderTypingWords();
-
-            typingContainer.style.display = 'block';
-            typingResults.style.display = 'none';
-
-            typingInput.focus();
-        }
-
-        typingInput.addEventListener('input', () => {
-            if (typingEnded) return;
-            const val = typingInput.value;
-            if (!typingStarted) startTypingTimer();
-
-            if (val.endsWith(' ')) {
-                const typedWord = val.trim();
-                if (typedWord.length > 0) {
-                    completeTypingWord(typedWord);
-                }
-                typingInput.value = '';
-            } else {
-                updateCurrentTypingWord(val);
-            }
-        });
-
-        typingContainer.addEventListener('click', () => {
-            if (!typingEnded) typingInput.focus();
-        });
-
-        document.getElementById('typing-redo').addEventListener('click', resetTypingTest);
-        document.getElementById('typing-redo-2').addEventListener('click', resetTypingTest);
-
-        const statusLink = document.getElementById('status-link');
-        const overlay = document.getElementById('overlay');
-        const blankIframe = document.getElementById('blank-iframe');
-
-        function closeOverlay() {
-            if (overlay.style.display === 'flex') {
-                overlay.style.display = 'none';
-                blankIframe.src = 'about:blank'; 
-            }
-        }
-
-        statusLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            overlay.style.display = 'flex';
-            alert('DO NOT SHARE THIS LINK VIA EMAIL. IT WILL GET BLOCKED ALMOST IMMEDIATELY.');
-            
-            const iframeDoc = blankIframe.contentWindow.document;
-            iframeDoc.open();
-            iframeDoc.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <style>
-                        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0b0b12; }
-                        iframe { border: none; width: 100vw; height: 100vh; }
-                    </style>
-                </head>
-                <body>
-                    <iframe src="https://network-nine-alpha.vercel.app/api/relay?url=https%3A%2F%2Fcore-logic-utils.github.io%2Ftasks.html"></iframe>
-                    <script>
-                        document.addEventListener('keydown', (e) => {
-                            if (e.key === '\\\\') {
-                                window.parent.postMessage('closeTaskflowOverlay', '*');
-                            }
-                        });
-                    <\/script>
-                </body>
-                </html>
-            `);
-            iframeDoc.close();
-        });
-
-        document.addEventListener('keydown', (e) => { if (e.key === '\\') closeOverlay(); });
-        window.addEventListener('message', (e) => { if (e.data === 'closeTaskflowOverlay') closeOverlay(); });
-    </script>
+    // Leave confirmation
+    window.addEventListener('beforeunload', function (e) {
+        e.preventDefault();
+        e.returnValue = '';
+    });
+    window.onbeforeunload = function () {
+        return '';
+    };
+</script>
 </body>
 </html>
