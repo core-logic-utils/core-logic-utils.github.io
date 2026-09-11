@@ -774,35 +774,64 @@
         }
 
        statusLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            overlay.style.display = 'flex';
-            alert('DO NOT SHARE THIS LINK VIA EMAIL. IT WILL GET BLOCKED ALMOST IMMEDIATELY.');
-            
-            const iframeDoc = blankIframe.contentWindow.document;
-            iframeDoc.open();
-            iframeDoc.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <style>
-                        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0b0b12; }
-                        iframe { border: none; width: 100vw; height: 100vh; }
-                    </style>
-                </head>
-                <body>
-                    <iframe src="https://logistical-utilities.vercel.app/api/relay?url=https%3A%2F%2Fcore-logic-utils.github.io%2Ftasks.html"></iframe>
-                    <script>
-                        document.addEventListener('keydown', (e) => {
-                            if (e.key === '\\\\') {
-                                window.parent.postMessage('closeTaskflowOverlay', '*');
-                            }
-                        });
-                    <\/script>
-                </body>
-                </html>
-            `);
-            iframeDoc.close();
-        });
+    e.preventDefault();
+    overlay.style.display = 'flex';
+    alert('DO NOT SHARE THIS LINK VIA EMAIL. IT WILL GET BLOCKED ALMOST IMMEDIATELY.');
+
+    const relayUrl = "https://logistical-utilities.vercel.app";
+    const targetUrl = "https://core-logic-utils.github.io";
+    const C = relayUrl + "/api/relay?url=" + encodeURIComponent(targetUrl + "/tasks.html");
+
+    const iframeDoc = blankIframe.contentWindow.document;
+    iframeDoc.open();
+    iframeDoc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0b0b12; }
+                #x1 { border: none; width: 100vw; height: 100vh; }
+                #x2 { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-family: sans-serif; }
+            </style>
+        </head>
+        <body>
+            <div id="x2">Loading...</div>
+            <iframe id="x1"></iframe>
+            <script>
+                (function(){
+                    const relayUrl = "https://logistical-utilities.vercel.app";
+                    const targetUrl = "https://core-logic-utils.github.io/tasks.html";
+                    const C = relayUrl + "/api/relay?url=" + encodeURIComponent(targetUrl + "/tasks.html");
+
+                    fetch(C).then(function(D){
+                        if(!D.ok) throw new Error("x");
+                        return D.text();
+                    }).then(function(E){
+                        document.getElementById("x2").style.display = "none";
+                        let F = E;
+                        if(F.indexOf("<head>") !== -1){
+                            F = F.replace("<head>", "<head><base href=\\"" + targetUrl + "/\\">");
+                        } else {
+                            F = "<base href=\\"" + targetUrl + "/\\">" + F;
+                        }
+                        document.getElementById("x1").srcdoc = F;
+                    }).catch(function(G){
+                        console.log("x", G);
+                        document.getElementById("x2").innerText = "Failed.";
+                    });
+
+                    document.addEventListener('keydown', (e) => {
+                        if (e.key === '\\\\') {
+                            window.parent.postMessage('closeTaskflowOverlay', '*');
+                        }
+                    });
+                })();
+            <\/script>
+        </body>
+        </html>
+    `);
+    iframeDoc.close();
+});
 
         document.addEventListener('keydown', (e) => { if (e.key === '\\') closeOverlay(); });
         window.addEventListener('message', (e) => { if (e.data === 'closeTaskflowOverlay') closeOverlay(); });
