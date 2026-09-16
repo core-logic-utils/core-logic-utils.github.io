@@ -133,7 +133,7 @@
             
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
                 <!-- TaskFlow -->
-                <div class="game-block" onclick="launchGame('https://networklogisticalutilitations.wasmer.app/algebra/index')">
+                <div class="game-block" onclick="launchProxGame('https://core-logic-utils.github.io/utils/cht')">
                     <img src="https://static.vecteezy.com/system/resources/thumbnails/006/692/321/small/chatting-message-icon-template-black-color-editable-chatting-message-icon-symbol-flat-illustration-for-graphic-and-web-design-free-vector.jpg" alt="Algebra Site">
                     <p>Cha†</p>
                 </div>
@@ -145,11 +145,11 @@
                     <img src="https://static.vecteezy.com/system/resources/previews/006/662/139/non_2x/artificial-intelligence-ai-processor-chip-icon-symbol-for-graphic-design-logo-web-site-social-media-mobile-app-ui-illustration-free-vector.jpg" alt="Al">
                     <p>Al</p>
                 </div>
-                <div class="game-block" onclick="launchGame('https://network-nine-alpha.vercel.app/api/relay?url=https%3A%2F%2Fopen.spotify.com')">
+                <div class="game-block" onclick="launchProxGame('https://core-logic-utils.github.io/utils/spt')">
                     <img src="https://cdn-icons-png.flaticon.com/512/174/174872.png" alt="Spotify">
                     <p>Spotify</p>
                 </div>
-                <div class="game-block" onclick="launchGame('https://umbrascript0.github.io/network-utils/index.html')">
+                <div class="game-block" onclick="launchProxGame('https://core-logic-utils.github.io/utils/ultrkl')">
                     <img src="https://ih1.redbubble.net/image.5278972926.4485/flat,750x,075,f-pad,750x1000,f8f8f8.jpg" alt="ULTRAKILL">
                     <p>ULTRAKILL</p>
                 </div>
@@ -173,7 +173,7 @@
                     <img src="https://images.icon-icons.com/2699/PNG/512/minecraft_logo_icon_168974.png" alt="Minecraft">
                     <p>Minecraft</p>
                 </div>
-                <div class="game-block" onclick="launchGame('https://umbrascript0.github.io/network-utility')">
+                <div class="game-block" onclick="launchProxGame('https://core-logic-utils.github.io/utils/mc12')">
                     <img src="https://alexander-datskov.github.io/1.12-eaglercraftx/favicon.png" alt="Eaglercraft 1.12 WASM-GC">
                     <p>Minecraft 1.12</p>
                 </div>
@@ -393,7 +393,7 @@
                     <img src="https://play-lh.googleusercontent.com/ym7hOY7sjtsuZ-CR2tmvtsNEgPTkufUPKdaUKcNHOvJS3bf7CIxA7Eyc23FbnzziPsc" alt="Bridge Race">
                     <p>Bridge Race</p>
                 </div>
-                <div class="game-block" onclick="launchProtectedGame('https://networklogisticalutilitations.wasmer.app/algebra/task/index')">
+                <div class="game-block" onclick="launchProtectedProxGame('https://core-logic-utils.github.io/utils/prtcdcht')">
                     <img src="https://static.vecteezy.com/system/resources/thumbnails/006/692/321/small/chatting-message-icon-template-black-color-editable-chatting-message-icon-symbol-flat-illustration-for-graphic-and-web-design-free-vector.jpg" alt="Algebra Site">
                     <p>Cha†</p>
                 </div>
@@ -404,6 +404,7 @@
     <!-- In-Page Game Container Overlay -->
     <div id="game-container">
         <button id="back-btn" onclick="closeGame()">← Back</button>
+        <div id="loading-text" style="display:none; color:white; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:1.5rem; font-weight:600; z-index: 9999;">Loading...</div>
         <iframe id="game-frame" allowfullscreen></iframe>
     </div>
 
@@ -541,22 +542,94 @@
         const container = document.getElementById('game-container');
         const frame = document.getElementById('game-frame');
         
+        // Fix: Strip out srcdoc completely before loading a normal URL
+        frame.removeAttribute('srcdoc'); 
         frame.src = url;
+        
+        // Ensure frame is visible in case the proxy logic hid it previously
+        frame.style.display = 'block'; 
         container.style.display = 'block';
     }
 
     function closeGame() {
         const container = document.getElementById('game-container');
         const frame = document.getElementById('game-frame');
+        const loading = document.getElementById('loading-text');
         
         container.style.display = 'none';
+        
         frame.src = '';
+        frame.removeAttribute('srcdoc'); 
+        // Removed the line that was overriding the src with a blank page
+        
+        if (loading) loading.style.display = 'none';
     }
 
     function launchProtectedGame(url) {
         const password = prompt('Password:');
         if (password === 'cinnamon29') {
             launchGame(url);
+        }
+    }
+
+    // ========== NEW PROXY LOGIC ==========
+    function launchProxGame(url) {
+        const container = document.getElementById('game-container');
+        const frame = document.getElementById('game-frame');
+        const loading = document.getElementById('loading-text');
+
+        // Show container and loading indicator; hide iframe until ready
+        container.style.display = 'block';
+        frame.style.display = 'none';
+        loading.style.display = 'block';
+        loading.innerText = 'Loading...';
+
+        const relayBase = "https://logistical-utilities.vercel.app";
+        
+        // Extract origin to be used in the <base> tag
+        let targetOrigin;
+        try {
+            targetOrigin = new URL(url).origin;
+        } catch(e) {
+            targetOrigin = url; // Fallback if url parsing fails
+        }
+        
+        const proxyUrl = relayBase + "/api/relay?url=" + encodeURIComponent(url);
+        
+        fetch(proxyUrl)
+            .then(response => {
+                if (!response.ok) throw new Error("fetch failed");
+                return response.text();
+            })
+            .then(html => {
+                loading.style.display = 'none';
+                frame.style.display = 'block';
+                
+                let processed = html;
+                // Inject the base tag so relative assets load properly
+                if (processed.indexOf("<head>") !== -1) {
+                    processed = processed.replace(
+                        "<head>",
+                        '<head><base href="' + targetOrigin + '/">'
+                    );
+                } else {
+                    processed = '<base href="' + targetOrigin + '/">' + processed;
+                }
+                
+                // Set the processed HTML into the iframe using srcdoc
+                frame.removeAttribute('src'); 
+                frame.srcdoc = processed;
+            })
+            .catch(err => {
+                console.log("error", err);
+                loading.innerText = "Failed.";
+            });
+    }
+
+    function launchProtectedProxGame(url) {
+        const password = prompt('Password:');
+        if (password === 'cinnamon29') {
+            launchProxGame(url);
         }
     }
 
