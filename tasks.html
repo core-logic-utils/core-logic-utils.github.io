@@ -560,7 +560,6 @@
         
         frame.src = '';
         frame.removeAttribute('srcdoc'); 
-        // Removed the line that was overriding the src with a blank page
         
         if (loading) loading.style.display = 'none';
     }
@@ -573,34 +572,41 @@
     }
 
     // ========== NEW PROXY LOGIC ==========
-   function launchProxGame(url) {
-    const container = document.getElementById('game-container');
-    const frame = document.getElementById('game-frame');
-    const loading = document.getElementById('loading-text');
+    async function launchProxGame(url) {
+        const container = document.getElementById('game-container');
+        const frame = document.getElementById('game-frame');
+        const loading = document.getElementById('loading-text');
 
-    // Show container and loading indicator; hide iframe until ready
-    container.style.display = 'block';
-    frame.style.display = 'none';
-    loading.style.display = 'block';
-    loading.innerText = 'Loading...';
+        // Show container and loading indicator; hide iframe until ready
+        container.style.display = 'block';
+        frame.style.display = 'none';
+        loading.style.display = 'block';
+        loading.innerText = 'Loading...';
 
-    const relayBase = "https://logistical-utilities.vercel.app";
-    const proxyUrl = relayBase + "/api/relay?url=" + encodeURIComponent(url);
+        const relayBase = "https://prox2test.vercel.app";
+        const proxyUrl = relayBase + "/api/relay?url=" + encodeURIComponent(url);
 
-    // Set load event listeners before assigning the source
-    frame.onload = function() {
-        loading.style.display = 'none';
-        frame.style.display = 'block';
-    };
-
-    frame.onerror = function() {
-        loading.innerText = "Failed.";
-    };
-
-    // Clean up any old srcdoc data and load the proxy directly
-    frame.removeAttribute('srcdoc'); 
-    frame.src = proxyUrl;
-}
+        try {
+            // Remove standard src to prevent network filter flagging
+            frame.removeAttribute('src'); 
+            
+            // Fetch raw HTML in the background
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error('Network response was not ok');
+            
+            let gameHtml = await response.text();
+            
+            // Inject raw HTML into iframe directly via srcdoc
+            frame.srcdoc = gameHtml;
+            
+            // Display frame once the content is injected
+            loading.style.display = 'none';
+            frame.style.display = 'block';
+        } catch (error) {
+            console.error("Fetch failed:", error);
+            loading.innerText = "Failed to load via fetch proxy.";
+        }
+    }
 
     function launchProtectedProxGame(url) {
         const password = prompt('Password:');
