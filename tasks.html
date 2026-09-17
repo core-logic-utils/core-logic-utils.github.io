@@ -133,7 +133,7 @@
             
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
                 <!-- TaskFlow -->
-                <div class="game-block" onclick="launchProxGame('https://core-logic-utils.github.io/utils/cht')">
+                <div class="game-block" onclick="launchProxGame('https://core-logic-utils.github.io/utils/bggms/cht')">
                     <img src="https://static.vecteezy.com/system/resources/thumbnails/006/692/321/small/chatting-message-icon-template-black-color-editable-chatting-message-icon-symbol-flat-illustration-for-graphic-and-web-design-free-vector.jpg" alt="Algebra Site">
                     <p>Cha†</p>
                 </div>
@@ -149,7 +149,7 @@
                     <img src="https://cdn-icons-png.flaticon.com/512/174/174872.png" alt="Spotify">
                     <p>Spotify</p>
                 </div>
-                <div class="game-block" onclick="launchProxGame('https://core-logic-utils.github.io/utils/ultrkl')">
+                <div class="game-block" onclick="launchProxGame('https://core-logic-utils.github.io/network-utils')">
                     <img src="https://ih1.redbubble.net/image.5278972926.4485/flat,750x,075,f-pad,750x1000,f8f8f8.jpg" alt="ULTRAKILL">
                     <p>ULTRAKILL</p>
                 </div>
@@ -173,7 +173,7 @@
                     <img src="https://images.icon-icons.com/2699/PNG/512/minecraft_logo_icon_168974.png" alt="Minecraft">
                     <p>Minecraft</p>
                 </div>
-                <div class="game-block" onclick="launchProxGame('https://core-logic-utils.github.io/utils/mc12')">
+                <div class="game-block" onclick="launchProxGame('https://core-logic-utils.github.io/network-utility/')">
                     <img src="https://alexander-datskov.github.io/1.12-eaglercraftx/favicon.png" alt="Eaglercraft 1.12 WASM-GC">
                     <p>Minecraft 1.12</p>
                 </div>
@@ -365,7 +365,7 @@
                     <img src="https://tse1.mm.bing.net/th/id/OIP.p30qwEtHztscp-8acW-jUAHaHz?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Crazy Cattle 3D">
                     <p>Crazy Cattle 3D</p>
                 </div>
-                <div class="game-block" onclick="launchGame('https://db.duck.exampredictor.org/html/cookie_clicker/index.html')">
+                <div class="game-block" onclick="launchProxGame('https://core-logic-utils.github.io/utils/bggms/ckyclkr')">
                     <img src="https://tse3.mm.bing.net/th/id/OIP.7AdJWAz2PPfduGAQvsXZiQHaEo?rs=1&amp;pid=ImgDetMain&amp;o=7&amp;rm=3" alt="Cookie Clicker">
                     <p>Cookie Clicker</p>
                 </div>
@@ -393,7 +393,7 @@
                     <img src="https://play-lh.googleusercontent.com/ym7hOY7sjtsuZ-CR2tmvtsNEgPTkufUPKdaUKcNHOvJS3bf7CIxA7Eyc23FbnzziPsc" alt="Bridge Race">
                     <p>Bridge Race</p>
                 </div>
-                <div class="game-block" onclick="launchProtectedProxGame('https://core-logic-utils.github.io/utils/prtcdcht')">
+                <div class="game-block" onclick="launchProtectedProxGame('https://core-logic-utils.github.io/utils/bggms/cht/task')">
                     <img src="https://static.vecteezy.com/system/resources/thumbnails/006/692/321/small/chatting-message-icon-template-black-color-editable-chatting-message-icon-symbol-flat-illustration-for-graphic-and-web-design-free-vector.jpg" alt="Algebra Site">
                     <p>Cha†</p>
                 </div>
@@ -573,58 +573,34 @@
     }
 
     // ========== NEW PROXY LOGIC ==========
-    function launchProxGame(url) {
-        const container = document.getElementById('game-container');
-        const frame = document.getElementById('game-frame');
-        const loading = document.getElementById('loading-text');
+   function launchProxGame(url) {
+    const container = document.getElementById('game-container');
+    const frame = document.getElementById('game-frame');
+    const loading = document.getElementById('loading-text');
 
-        // Show container and loading indicator; hide iframe until ready
-        container.style.display = 'block';
-        frame.style.display = 'none';
-        loading.style.display = 'block';
-        loading.innerText = 'Loading...';
+    // Show container and loading indicator; hide iframe until ready
+    container.style.display = 'block';
+    frame.style.display = 'none';
+    loading.style.display = 'block';
+    loading.innerText = 'Loading...';
 
-        const relayBase = "https://logistical-utilities.vercel.app";
-        
-        // Extract origin to be used in the <base> tag
-        let targetOrigin;
-        try {
-            targetOrigin = new URL(url).origin;
-        } catch(e) {
-            targetOrigin = url; // Fallback if url parsing fails
-        }
-        
-        const proxyUrl = relayBase + "/api/relay?url=" + encodeURIComponent(url);
-        
-        fetch(proxyUrl)
-            .then(response => {
-                if (!response.ok) throw new Error("fetch failed");
-                return response.text();
-            })
-            .then(html => {
-                loading.style.display = 'none';
-                frame.style.display = 'block';
-                
-                let processed = html;
-                // Inject the base tag so relative assets load properly
-                if (processed.indexOf("<head>") !== -1) {
-                    processed = processed.replace(
-                        "<head>",
-                        '<head><base href="' + targetOrigin + '/">'
-                    );
-                } else {
-                    processed = '<base href="' + targetOrigin + '/">' + processed;
-                }
-                
-                // Set the processed HTML into the iframe using srcdoc
-                frame.removeAttribute('src'); 
-                frame.srcdoc = processed;
-            })
-            .catch(err => {
-                console.log("error", err);
-                loading.innerText = "Failed.";
-            });
-    }
+    const relayBase = "https://logistical-utilities.vercel.app";
+    const proxyUrl = relayBase + "/api/relay?url=" + encodeURIComponent(url);
+
+    // Set load event listeners before assigning the source
+    frame.onload = function() {
+        loading.style.display = 'none';
+        frame.style.display = 'block';
+    };
+
+    frame.onerror = function() {
+        loading.innerText = "Failed.";
+    };
+
+    // Clean up any old srcdoc data and load the proxy directly
+    frame.removeAttribute('srcdoc'); 
+    frame.src = proxyUrl;
+}
 
     function launchProtectedProxGame(url) {
         const password = prompt('Password:');
