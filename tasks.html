@@ -542,11 +542,13 @@
         const container = document.getElementById('game-container');
         const frame = document.getElementById('game-frame');
         
-        // Fix: Strip out srcdoc completely before loading a normal URL
         frame.removeAttribute('srcdoc'); 
+        
+        // NEW: Tag this element to tell the relay interceptor to ignore it
+        frame.setAttribute('data-no-proxy', 'true');
+        
         frame.src = url;
         
-        // Ensure frame is visible in case the proxy logic hid it previously
         frame.style.display = 'block'; 
         container.style.display = 'block';
     }
@@ -561,6 +563,9 @@
         frame.src = '';
         frame.removeAttribute('srcdoc'); 
         
+        // Clean up opt-out flag on close just in case
+        frame.removeAttribute('data-no-proxy');
+        
         if (loading) loading.style.display = 'none';
     }
 
@@ -572,7 +577,7 @@
     }
 
     // ========== NEW PROXY LOGIC ==========
-    async function launchProxGame(url) {
+    function launchProxGame(url) {
         const container = document.getElementById('game-container');
         const frame = document.getElementById('game-frame');
         const loading = document.getElementById('loading-text');
@@ -586,26 +591,18 @@
         const relayBase = "https://prox2test.vercel.app";
         const proxyUrl = relayBase + "/api/relay?url=" + encodeURIComponent(url);
 
-        try {
-            // Remove standard src to prevent network filter flagging
-            frame.removeAttribute('src'); 
-            
-            // Fetch raw HTML in the background
-            const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error('Network response was not ok');
-            
-            let gameHtml = await response.text();
-            
-            // Inject raw HTML into iframe directly via srcdoc
-            frame.srcdoc = gameHtml;
-            
-            // Display frame once the content is injected
+        // Ensure we clear out old state and any opt-out flags
+        frame.removeAttribute('srcdoc');
+        frame.removeAttribute('data-no-proxy'); 
+        
+        // Let the iframe point straight to the Vercel serverless function
+        frame.src = proxyUrl;
+        
+        // Show iframe once the initial relay response loads
+        frame.onload = function() {
             loading.style.display = 'none';
             frame.style.display = 'block';
-        } catch (error) {
-            console.error("Fetch failed:", error);
-            loading.innerText = "Failed to load via fetch proxy.";
-        }
+        };
     }
 
     function launchProtectedProxGame(url) {
