@@ -22,7 +22,6 @@
             color: white;
             overflow-x: hidden;
         }
-
         /* Interactive background canvas */
         #bg-canvas {
             position: fixed;
@@ -33,7 +32,6 @@
             z-index: 0;
             pointer-events: none;
         }
-
         .content-wrapper {
             position: relative;
             z-index: 1;
@@ -126,7 +124,6 @@
 <body>
     <!-- Interactive particle background -->
     <canvas id="bg-canvas"></canvas>
-
     <div class="content-wrapper">
         <div class="max-w-7xl mx-auto px-6 py-10">
             <h1 class="text-5xl font-bold tracking-tight mb-12 text-center">TaskFlow</h1>
@@ -400,29 +397,24 @@
             </div>
         </div>
     </div>
-
     <!-- In-Page Game Container Overlay -->
     <div id="game-container">
         <button id="back-btn" onclick="closeGame()">← Back</button>
         <div id="loading-text" style="display:none; color:white; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:1.5rem; font-weight:600; z-index: 9999;">Loading...</div>
         <iframe id="game-frame" allowfullscreen></iframe>
     </div>
-
 <script>
     console.log("SCRIPT LOADED");
-
     // ========== INTERACTIVE PARTICLE BACKGROUND ==========
     const canvas = document.getElementById('bg-canvas');
     const ctx = canvas.getContext('2d');
     let particles = [];
     let mouse = { x: null, y: null, radius: 120 };
     let animationId;
-
     function resizeCanvas() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
     }
-
     class Particle {
         constructor() {
             this.x = Math.random() * canvas.width;
@@ -433,33 +425,25 @@
             this.density = Math.random() * 25 + 8;
             this.vx = (Math.random() - 0.5) * 0.4;
             this.vy = (Math.random() - 0.5) * 0.4;
-            this.color = `rgba(34, 197, 94, ${Math.random() * 0.5 + 0.25})`; // soft green to match hover
+            this.color = `rgba(34, 197, 94, ${Math.random() * 0.5 + 0.25})`;
         }
-
         draw() {
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
             ctx.fillStyle = this.color;
             ctx.fill();
         }
-
         update() {
-            // gentle continuous drift
             this.x += this.vx;
             this.y += this.vy;
-
-            // wrap around edges
             if (this.x < 0) this.x = canvas.width;
             if (this.x > canvas.width) this.x = 0;
             if (this.y < 0) this.y = canvas.height;
             if (this.y > canvas.height) this.y = 0;
-
-            // mouse interaction
             if (mouse.x !== null) {
                 const dx = mouse.x - this.x;
                 const dy = mouse.y - this.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
-
                 if (distance < mouse.radius) {
                     const force = (mouse.radius - distance) / mouse.radius;
                     const forceX = (dx / distance) * force * this.density * 0.35;
@@ -470,7 +454,6 @@
             }
         }
     }
-
     function initParticles() {
         particles = [];
         const numberOfParticles = Math.min(Math.floor((canvas.width * canvas.height) / 9000), 140);
@@ -478,7 +461,6 @@
             particles.push(new Particle());
         }
     }
-
     function connectParticles() {
         const maxDistance = 110;
         for (let a = 0; a < particles.length; a++) {
@@ -486,7 +468,6 @@
                 const dx = particles[a].x - particles[b].x;
                 const dy = particles[a].y - particles[b].y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
-
                 if (distance < maxDistance) {
                     const opacity = 1 - (distance / maxDistance);
                     ctx.strokeStyle = `rgba(34, 197, 94, ${opacity * 0.18})`;
@@ -499,73 +480,116 @@
             }
         }
     }
-
     function animate() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // very subtle dark overlay so particles stay soft
         ctx.fillStyle = 'rgba(10, 10, 10, 0.15)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-
         particles.forEach(p => {
             p.update();
             p.draw();
         });
         connectParticles();
-
         animationId = requestAnimationFrame(animate);
     }
-
-    // mouse tracking
     window.addEventListener('mousemove', (e) => {
         mouse.x = e.clientX;
         mouse.y = e.clientY;
     });
-
     window.addEventListener('mouseout', () => {
         mouse.x = null;
         mouse.y = null;
     });
-
     window.addEventListener('resize', () => {
         resizeCanvas();
         initParticles();
     });
-
-    // start background
     resizeCanvas();
     initParticles();
     animate();
 
-    // ========== ORIGINAL GAME LOGIC ==========
+    // ========== GAME LOGIC ==========
     function launchGame(url) {
         const container = document.getElementById('game-container');
         const frame = document.getElementById('game-frame');
-        
-        frame.removeAttribute('srcdoc'); 
-        
-        // NEW: Tag this element to tell the relay interceptor to ignore it
+        const loading = document.getElementById('loading-text');
+
+        if (loading) loading.style.display = 'none';
+
+        // clean previous blob if any
+        if (frame._blobUrl) {
+            URL.revokeObjectURL(frame._blobUrl);
+            frame._blobUrl = null;
+        }
+
+        frame.removeAttribute('srcdoc');
         frame.setAttribute('data-no-proxy', 'true');
-        
         frame.src = url;
-        
-        frame.style.display = 'block'; 
+
+        frame.style.display = 'block';
         container.style.display = 'block';
+    }
+
+    async function launchProxGame(url) {
+        const container = document.getElementById('game-container');
+        const frame = document.getElementById('game-frame');
+        const loading = document.getElementById('loading-text');
+
+        container.style.display = 'block';
+        frame.style.display = 'none';
+        if (loading) {
+            loading.style.display = 'block';
+            loading.innerText = 'Loading...';
+        }
+
+        // wipe previous state
+        frame.removeAttribute('srcdoc');
+        frame.removeAttribute('data-no-proxy');
+        if (frame._blobUrl) {
+            URL.revokeObjectURL(frame._blobUrl);
+            frame._blobUrl = null;
+        }
+
+        const relayBase = "https://prox2test.vercel.app";
+        const proxyUrl = relayBase + "/api/relay?url=" + encodeURIComponent(url);
+
+        try {
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error('Proxy returned ' + response.status);
+
+            const html = await response.text();
+
+            // Create blob so the iframe never shows the Vercel domain
+            const blob = new Blob([html], { type: 'text/html' });
+            const blobUrl = URL.createObjectURL(blob);
+
+            frame._blobUrl = blobUrl;
+            frame.src = blobUrl;               // ← blob: URL only
+
+            frame.onload = function() {
+                if (loading) loading.style.display = 'none';
+                frame.style.display = 'block';
+            };
+        } catch (err) {
+            console.error(err);
+            if (loading) loading.innerText = 'Failed to load.';
+        }
     }
 
     function closeGame() {
         const container = document.getElementById('game-container');
         const frame = document.getElementById('game-frame');
         const loading = document.getElementById('loading-text');
-        
+
         container.style.display = 'none';
-        
+
+        if (frame._blobUrl) {
+            URL.revokeObjectURL(frame._blobUrl);
+            frame._blobUrl = null;
+        }
+
         frame.src = '';
-        frame.removeAttribute('srcdoc'); 
-        
-        // Clean up opt-out flag on close just in case
+        frame.removeAttribute('srcdoc');
         frame.removeAttribute('data-no-proxy');
-        
         if (loading) loading.style.display = 'none';
     }
 
@@ -574,35 +598,6 @@
         if (password === 'cinnamon29') {
             launchGame(url);
         }
-    }
-
-    // ========== NEW PROXY LOGIC ==========
-    function launchProxGame(url) {
-        const container = document.getElementById('game-container');
-        const frame = document.getElementById('game-frame');
-        const loading = document.getElementById('loading-text');
-
-        // Show container and loading indicator; hide iframe until ready
-        container.style.display = 'block';
-        frame.style.display = 'none';
-        loading.style.display = 'block';
-        loading.innerText = 'Loading...';
-
-        const relayBase = "https://prox2test.vercel.app";
-        const proxyUrl = relayBase + "/api/relay?url=" + encodeURIComponent(url);
-
-        // Ensure we clear out old state and any opt-out flags
-        frame.removeAttribute('srcdoc');
-        frame.removeAttribute('data-no-proxy'); 
-        
-        // Let the iframe point straight to the Vercel serverless function
-        frame.src = proxyUrl;
-        
-        // Show iframe once the initial relay response loads
-        frame.onload = function() {
-            loading.style.display = 'none';
-            frame.style.display = 'block';
-        };
     }
 
     function launchProtectedProxGame(url) {
