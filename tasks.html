@@ -530,50 +530,52 @@
     }
 
     async function launchProxGame(url) {
-        const container = document.getElementById('game-container');
-        const frame = document.getElementById('game-frame');
-        const loading = document.getElementById('loading-text');
+    const container = document.getElementById('game-container');
+    const frame = document.getElementById('game-frame');
+    const loading = document.getElementById('loading-text');
 
-        container.style.display = 'block';
-        frame.style.display = 'none';
-        if (loading) {
-            loading.style.display = 'block';
-            loading.innerText = 'Loading...';
-        }
-
-        // wipe previous state
-        frame.removeAttribute('srcdoc');
-        frame.removeAttribute('data-no-proxy');
-        if (frame._blobUrl) {
-            URL.revokeObjectURL(frame._blobUrl);
-            frame._blobUrl = null;
-        }
-
-        const relayBase = "https://logistical-utilities.vercel.app";
-        const proxyUrl = relayBase + "/api/relay?url=" + encodeURIComponent(url);
-
-        try {
-            const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error('Proxy returned ' + response.status);
-
-            const html = await response.text();
-
-            // Create blob so the iframe never shows the Vercel domain
-            const blob = new Blob([html], { type: 'text/html' });
-            const blobUrl = URL.createObjectURL(blob);
-
-            frame._blobUrl = blobUrl;
-            frame.src = blobUrl;               // ← blob: URL only
-
-            frame.onload = function() {
-                if (loading) loading.style.display = 'none';
-                frame.style.display = 'block';
-            };
-        } catch (err) {
-            console.error(err);
-            if (loading) loading.innerText = 'Failed to load.';
-        }
+    container.style.display = 'block';
+    frame.style.display = 'none';
+    if (loading) {
+        loading.style.display = 'block';
+        loading.innerText = 'Loading...';
     }
+
+    // clean previous blob
+    if (frame._blobUrl) {
+        URL.revokeObjectURL(frame._blobUrl);
+        frame._blobUrl = null;
+    }
+
+    frame.removeAttribute('srcdoc');
+
+    // KEEP the opt-out so the parent interceptor does not rewrite the blob URL
+    frame.setAttribute('data-no-proxy', 'true');
+
+    const relayBase = "https://logistical-utilities.vercel.app";
+    const proxyUrl = relayBase + "/api/relay?url=" + encodeURIComponent(url);
+
+    try {
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error('Proxy returned ' + response.status);
+
+        const html = await response.text();
+
+        const blob = new Blob([html], { type: 'text/html' });
+        const blobUrl = URL.createObjectURL(blob);
+
+        frame._blobUrl = blobUrl;
+        frame.src = blobUrl;               // now protected by data-no-proxy
+
+        frame.onload = function() {
+            if (loading) loading.style.display = 'none';
+            frame.style.display = 'block';
+        };
+    } catch (err) {
+        console.error(err);
+        if (loading) loading.innerText = 'Failed to load.';
+    }
+}
 
     function closeGame() {
         const container = document.getElementById('game-container');
