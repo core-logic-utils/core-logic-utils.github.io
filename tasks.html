@@ -552,8 +552,8 @@
     // KEEP the opt-out so the parent interceptor does not rewrite the blob URL
     frame.setAttribute('data-no-proxy', 'true');
 
-    const relayBase = "https://network-98.network-logic.deno.net";
-    const proxyUrl = relayBase + "/api/relay.js?url=" + encodeURIComponent(url);
+    const relayBase = "https://network-aqzh.onrender.com";
+    const proxyUrl = relayBase + "/api/relay?url=" + encodeURIComponent(url);
 
     try {
         const response = await fetch(proxyUrl);
