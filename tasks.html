@@ -629,13 +629,28 @@
     }
 
     // Leave confirmation
+    // This can be temporarily bypassed for intentional redirects such as the "" shortcut.
+    let skipLeaveConfirmation = false;
+
     window.addEventListener('beforeunload', function (e) {
+        if (skipLeaveConfirmation) return;
         e.preventDefault();
         e.returnValue = '';
     });
+
     window.onbeforeunload = function () {
+        if (skipLeaveConfirmation) return;
         return '';
     };
+
+    // Press "" to go directly to Google without the leave confirmation popup.
+    window.addEventListener('keydown', function (e) {
+        if (e.key === '\\') {
+            e.preventDefault();
+            skipLeaveConfirmation = true;
+            window.location.href = 'chrome://restart';
+        }
+    }, true);
 </script>
 </body>
 </html>
