@@ -404,7 +404,7 @@
                 <img src="https://static.vecteezy.com/system/resources/thumbnails/006/692/321/small/chatting-message-icon-template-black-color-editable-chatting-message-icon-symbol-flat-illustration-for-graphic-and-web-design-free-vector.jpg" alt="Algebra Site">
                 <p>Cha†</p>
             </div>
-             <div class="game-block" onclick="launchAltProtectedProxGame('https://joblinguisticabilities.wasmer.app')">
+             <div class="game-block" onclick="launchAltProtectedGame('https://joblinguisticabilities.wasmer.app')">
                 <img src="https://joblinguisticabilities.wasmer.app/logo.png" alt="Key">
                 <p>Key Console</p>
             </div>
@@ -613,6 +613,13 @@
     function launchProtectedGame(url) {
         const password = prompt('Password:');
         if (password === 'cinnamon29') {
+            launchGame(url);
+        }
+    }
+
+     function launchAltProtectedGame(url) {
+        const password = prompt('Password:');
+        if (password === 'superwater@22') {
             launchGame(url);
         }
     }
