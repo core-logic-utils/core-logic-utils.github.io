@@ -1,0 +1,2315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabspace</title>
+    <link rel="icon" href="https://core-logic-utils.github.io/assets/tabspacelogo.png">
+    <meta name="description" content="Tabspace — a streamlined productivity and organization tool.">
+    <meta property="og:title" content="Tabspace">
+    <meta property="og:type" content="website">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+        --bg: #0b0506;
+        --panel: #1a0d0f;
+        --panel-2: #241216;
+        --border: #3a1a1f;
+        --accent: #ef4444;
+        --accent-dark: #b91c1c;
+        --accent-glow: rgba(239, 68, 68, 0.35);
+        /* added: derived theme values (defaults reproduce the original colors exactly) */
+        --accent-rgb: 239, 68, 68;
+        --accent-dark-rgb: 185, 28, 28;
+        --accent-light: #fca5a5;
+        --accent-ink: #ffffff;
+        --accent-text: var(--accent);
+        --bg-rgb: 11, 5, 6;
+        --panel-rgb: 26, 13, 15;
+        --panel-hi-rgb: 60, 20, 26;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        background: var(--bg);
+        font-family: 'Inter', sans-serif;
+        color: white;
+        overflow-x: hidden;
+    }
+
+    /* ---------- Interactive background ---------- */
+    #bg-canvas {
+        position: fixed; top: 0; left: 0;
+        width: 100%; height: 100%;
+        z-index: 0; pointer-events: none;
+    }
+
+    /* ---------- Home screen ---------- */
+    #home {
+        position: relative; z-index: 1;
+        min-height: 100vh;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        text-align: center;
+        padding: 24px;
+        transition: opacity .35s ease, transform .35s ease;
+    }
+    #home img {
+        width: 150px; height: 150px; object-fit: contain;
+        filter: drop-shadow(0 0 28px var(--accent-glow));
+        animation: float 5s ease-in-out infinite;
+    }
+    #home h1 {
+        margin: 18px 0 0;
+        font-size: 4rem; font-weight: 700; letter-spacing: -0.02em;
+        background: linear-gradient(180deg, #fff 30%, var(--accent-light) 100%);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+    }
+    body.games-open #home { opacity: 0; transform: scale(.97); pointer-events: none; }
+
+    /* ---------- Search bar (top middle) ---------- */
+    #search-wrap {
+        position: fixed; top: 18px; left: 50%;
+        transform: translateX(-50%);
+        z-index: 60;
+        width: min(460px, calc(100vw - 150px));
+        opacity: 0; pointer-events: none;
+        transform: translateX(-50%) translateY(-8px);
+        transition: opacity .3s ease, transform .3s ease;
+    }
+    body.games-open #search-wrap {
+        opacity: 1; pointer-events: auto;
+        transform: translateX(-50%);
+    }
+    #search-wrap i {
+        position: absolute; left: 16px; top: 50%;
+        transform: translateY(-50%);
+        color: #a1a1aa; font-size: .9rem; pointer-events: none;
+    }
+    #search {
+        width: 100%;
+        background: rgba(var(--panel-rgb), 0.8);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border);
+        color: white; font: inherit; font-size: .95rem;
+        padding: 11px 16px 11px 42px;
+        border-radius: 999px; outline: none;
+        transition: border-color .2s, box-shadow .2s;
+    }
+    #search::placeholder { color: #8b6f73; }
+    #search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+    /* ---------- Games view ---------- */
+    #games-view {
+        position: fixed; inset: 0; z-index: 10;
+        overflow-y: auto;
+        padding: 84px 24px 110px;
+        opacity: 0; pointer-events: none;
+        transform: translateY(14px);
+        transition: opacity .35s ease, transform .35s ease;
+    }
+    body.games-open #games-view { opacity: 1; pointer-events: auto; transform: none; }
+
+    #home-btn {
+        position: fixed; top: 18px; left: 18px; z-index: 60;
+        display: none; align-items: center; gap: 8px;
+        background: rgba(var(--panel-rgb), 0.8);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border);
+        color: white; font: inherit; font-size: .85rem; font-weight: 500;
+        padding: 10px 14px; border-radius: 999px; cursor: pointer;
+        transition: border-color .2s, background .2s;
+    }
+    #home-btn:hover { border-color: var(--accent); background: rgba(var(--panel-hi-rgb), 0.9); }
+    body.games-open #home-btn { display: flex; }
+
+    #games-grid {
+        max-width: 1400px; margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+        gap: 12px;
+    }
+    #no-results {
+        display: none; text-align: center; color: #8b6f73; margin-top: 60px;
+    }
+
+    /* Smaller game blocks */
+    .game-block {
+        background: var(--panel);
+        border-radius: 12px;
+        overflow: hidden; cursor: pointer;
+        border: 1px solid var(--border);
+        transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+    }
+    .game-block:hover {
+        transform: translateY(-4px) scale(1.04);
+        border-color: var(--accent);
+        box-shadow: 0 10px 22px -6px rgba(0,0,0,.6), 0 0 16px var(--accent-glow);
+    }
+    .game-block img {
+        width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block;
+        background: var(--panel-2);
+        transition: transform .35s ease;
+    }
+    .game-block:hover img { transform: scale(1.08); }
+    .game-block p {
+        margin: 0; padding: 7px 6px;
+        text-align: center; font-size: .72rem; font-weight: 500; line-height: 1.25;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        overflow: hidden; min-height: 2.6em;
+    }
+
+    /* ---------- Launcher (controller button + dropdown) ---------- */
+    #launcher {
+        position: fixed; left: 20px; bottom: 20px; z-index: 70;
+        transition: opacity .25s ease, transform .25s ease;
+    }
+    body.in-game #launcher { opacity: 0; pointer-events: none; transform: scale(.8); visibility: hidden; }
+
+    #launcher-btn {
+        width: 54px; height: 54px;
+        display: flex; align-items: center; justify-content: center;
+        background: linear-gradient(145deg, var(--accent), var(--accent-dark));
+        color: var(--accent-ink); font-size: 1.4rem;
+        border: none; border-radius: 16px; cursor: pointer;
+        box-shadow: 0 6px 18px rgba(var(--accent-dark-rgb), .45);
+        transition: transform .2s ease, box-shadow .2s ease;
+    }
+    #launcher:hover #launcher-btn, #launcher.open #launcher-btn {
+        transform: translateY(-2px) scale(1.06);
+        box-shadow: 0 10px 26px var(--accent-glow);
+    }
+
+    /* The menu sits directly above the button. The padding-bottom acts as a
+       hover bridge so the menu doesn't vanish while the mouse crosses the gap. */
+    #menu-wrap {
+        position: absolute; left: 0; bottom: 100%;
+        padding-bottom: 10px;
+        opacity: 0; visibility: hidden;
+        transform: translateY(10px) scale(.97);
+        transform-origin: bottom left;
+        transition: opacity .2s ease, transform .2s ease, visibility .2s;
+    }
+    #launcher:hover #menu-wrap, #launcher.open #menu-wrap {
+        opacity: 1; visibility: visible; transform: none;
+    }
+    #launcher.suppress #menu-wrap { opacity: 0; visibility: hidden; }
+
+    .menu {
+        min-width: 210px;
+        background: rgba(var(--panel-rgb), 0.95);
+        backdrop-filter: blur(14px);
+        border: 1px solid var(--border);
+        border-radius: 16px; padding: 6px;
+        box-shadow: 0 18px 40px rgba(0,0,0,.6);
+    }
+    .menu-item {
+        position: relative;
+        display: flex; align-items: center; gap: 12px;
+        padding: 10px 12px; border-radius: 10px;
+        font-size: .92rem; font-weight: 500;
+        cursor: pointer; user-select: none;
+        transition: background .15s ease;
+    }
+    .menu-item:hover { background: rgba(var(--accent-rgb), .18); }
+    .menu-item .mi-icon { width: 20px; text-align: center; color: var(--accent-text); }
+    .menu-item .mi-arrow { margin-left: auto; font-size: .7rem; color: #8b6f73; }
+
+    /* Chat 1 / Chat 2 fly-out */
+    .submenu {
+        position: absolute; left: 100%; bottom: -6px;
+        padding-left: 8px;
+        opacity: 0; visibility: hidden;
+        transform: translateX(-6px);
+        transition: opacity .15s ease, transform .15s ease, visibility .15s;
+    }
+    .menu-item.has-sub:hover > .submenu,
+    .menu-item.has-sub.sub-open > .submenu {
+        opacity: 1; visibility: visible; transform: none;
+    }
+
+    /* ---------- Game player ---------- */
+    #game-container {
+        position: fixed; top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        background: black; z-index: 9998; display: none;
+    }
+    #game-frame { border: none; width: 100vw; height: 100vh; display: block; }
+    #back-btn {
+        position: fixed; top: 14px; left: 14px; z-index: 9999;
+        width: 42px; height: 42px;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(var(--accent-rgb), 0.22);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(var(--accent-rgb), 0.35);
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1rem;
+        border-radius: 12px; cursor: pointer;
+        transition: background .2s ease, transform .2s ease, box-shadow .2s ease;
+    }
+    #back-btn:hover {
+        background: rgba(var(--accent-rgb), 0.55);
+        transform: translateX(-2px);
+        box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.35);
+    }
+
+    @media (max-width: 640px) {
+        #home h1 { font-size: 2.8rem; }
+        #home img { width: 110px; height: 110px; }
+        #games-grid { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 10px; }
+    }
+
+    /* =====================================================================
+       TABSPACE ACCOUNT / CUSTOMIZATION / SYNC UI  (added)
+       ===================================================================== */
+    #bg-image {
+        position: fixed; inset: 0; z-index: 0; pointer-events: none;
+        background-color: var(--bg);
+        background-size: cover; background-position: center; background-repeat: no-repeat;
+        display: none;
+    }
+    #bg-image::after { content: ""; position: absolute; inset: 0; background: rgba(var(--bg-rgb), .35); }
+    body.has-bg-image #bg-image { display: block; }
+    body.bg-effect-off #bg-canvas { display: none; }
+
+    .ts-iconbtn {
+        width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center;
+        background: rgba(var(--panel-rgb), 0.8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+        border: 1px solid var(--border); color: white; border-radius: 999px; cursor: pointer;
+        transition: border-color .2s, background .2s, transform .2s; font-size: 1rem;
+    }
+    .ts-iconbtn:hover { border-color: var(--accent); background: rgba(var(--panel-hi-rgb), 0.9); }
+    .ts-iconbtn:focus-visible, .ts-btn:focus-visible, .ts-link:focus-visible, .ts-switch-input:focus-visible + .ts-switch-track,
+    #ts-signout-btn:focus-visible, .ts-tabs button:focus-visible, .ts-swatch:focus-visible {
+        outline: 2px solid var(--accent-text); outline-offset: 2px;
+    }
+    #ts-custom-btn { position: fixed; top: 18px; right: 18px; z-index: 60; }
+    body.in-game #ts-custom-btn, body.in-game #ts-sync-pill { display: none; }
+
+    #ts-sync-pill {
+        position: fixed; top: 22px; right: 70px; z-index: 60;
+        display: none; align-items: center; gap: 7px;
+        padding: 7px 12px; border-radius: 999px; font-size: .75rem; font-weight: 500; color: #e4d4d6;
+        background: rgba(var(--panel-rgb), 0.8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+        border: 1px solid var(--border); pointer-events: none; white-space: nowrap;
+    }
+    @media (min-width: 900px) { #ts-sync-pill.show { display: inline-flex; } }
+    .ts-dot { width: 8px; height: 8px; border-radius: 50%; background: #71717a; flex: none; }
+    .ts-dot.saved { background: #22c55e; } .ts-dot.saving { background: #eab308; } .ts-dot.failed { background: #f43f5e; }
+    .ts-dot.waiting { background: #a1a1aa; } .ts-dot.local { background: #60a5fa; } .ts-dot.conflict { background: #f97316; }
+
+    /* Sign-out button next to the menu (gamepad) button */
+    #ts-signout-btn {
+        position: absolute; left: 62px; bottom: 9px; width: 36px; height: 36px;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(var(--panel-rgb), 0.95); border: 1px solid var(--border); color: #f4f4f5;
+        border-radius: 11px; cursor: pointer; font-size: .9rem;
+        opacity: 0; visibility: hidden; transform: translateX(-6px);
+        transition: opacity .2s ease, transform .2s ease, visibility .2s, border-color .2s, background .2s;
+    }
+    #ts-signout-btn::before { content: ""; position: absolute; left: -12px; top: 0; width: 12px; height: 100%; }
+    #ts-signout-btn:hover { border-color: var(--accent); background: rgba(var(--panel-hi-rgb), 0.95); }
+    #launcher:hover #ts-signout-btn, #launcher.open #ts-signout-btn { opacity: 1; visibility: visible; transform: none; }
+    #launcher.suppress #ts-signout-btn { opacity: 0; visibility: hidden; }
+    #ts-signout-btn[hidden] { display: none; }
+
+    /* Shared controls */
+    .ts-btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        font: inherit; font-size: .88rem; font-weight: 600; padding: 10px 14px; border-radius: 12px;
+        cursor: pointer; border: 1px solid var(--border); color: white; background: var(--panel-2);
+        transition: background .2s, border-color .2s, opacity .2s, transform .15s;
+    }
+    .ts-btn:hover:not(:disabled) { border-color: var(--accent); }
+    .ts-btn:active:not(:disabled) { transform: translateY(1px); }
+    .ts-btn:disabled { opacity: .55; cursor: not-allowed; }
+    .ts-btn-primary { background: linear-gradient(145deg, var(--accent), var(--accent-dark)); color: var(--accent-ink); border-color: transparent; }
+    .ts-btn-primary:hover:not(:disabled) { border-color: transparent; box-shadow: 0 6px 18px var(--accent-glow); }
+    .ts-btn-ghost { background: transparent; }
+    .ts-btn-danger { background: rgba(244, 63, 94, .12); border-color: rgba(244, 63, 94, .4); color: #fecdd3; }
+    .ts-btn-danger:hover:not(:disabled) { border-color: #f43f5e; }
+    .ts-btn-sm { padding: 7px 10px; font-size: .8rem; border-radius: 10px; }
+    .ts-link { background: none; border: none; color: var(--accent-text); font: inherit; font-weight: 600; cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
+    .ts-input {
+        width: 100%; background: rgba(0,0,0,.25); border: 1px solid var(--border); color: white;
+        font: inherit; font-size: .95rem; padding: 10px 12px; border-radius: 10px; outline: none;
+        transition: border-color .2s, box-shadow .2s;
+    }
+    .ts-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .ts-input[aria-invalid="true"] { border-color: #f43f5e; }
+    .ts-label { display: block; font-size: .8rem; font-weight: 500; color: #d4c4c6; margin-bottom: 6px; }
+    .ts-field { margin-bottom: 12px; text-align: left; }
+    .ts-error { color: #fda4af; font-size: .82rem; min-height: 1.2em; margin: 4px 0 0; text-align: left; }
+    .ts-hint { color: #a89597; font-size: .76rem; margin: 6px 0 0; line-height: 1.4; }
+    .ts-notice { background: rgba(var(--accent-rgb), .1); border: 1px solid rgba(var(--accent-rgb), .35); color: #f1e4e5;
+        border-radius: 10px; padding: 10px 12px; font-size: .82rem; margin-bottom: 12px; text-align: left; line-height: 1.45; }
+    .ts-spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); border-top-color: currentColor; animation: ts-spin .8s linear infinite; flex: none; }
+    .ts-spinner[hidden] { display: none; }
+    @keyframes ts-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .ts-spinner { animation-duration: 2s; } }
+
+    /* Auth screen */
+    #ts-auth {
+        position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center;
+        padding: 20px; background: rgba(var(--bg-rgb), .72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+        overflow-y: auto;
+    }
+    #ts-auth[hidden] { display: none; }
+    .ts-auth-card {
+        width: min(400px, 100%); background: rgba(var(--panel-rgb), .92); border: 1px solid var(--border);
+        border-radius: 20px; padding: 26px 24px 22px; text-align: center; box-shadow: 0 24px 60px rgba(0,0,0,.6);
+    }
+    .ts-auth-card > img { width: 64px; height: 64px; object-fit: contain; margin: 0 auto; filter: drop-shadow(0 0 18px var(--accent-glow)); }
+    .ts-auth-card h2 { margin: 8px 0 18px; font-size: 1.6rem; font-weight: 700; letter-spacing: -0.01em; }
+    .ts-auth-state { display: flex; align-items: center; justify-content: center; gap: 10px; color: #d4c4c6; font-size: .9rem; padding: 18px 0; }
+    .ts-auth-state[hidden], #ts-auth-forms[hidden] { display: none; }
+    .ts-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: rgba(0,0,0,.25); border-radius: 12px; margin-bottom: 16px; }
+    .ts-tabs button { font: inherit; font-size: .88rem; font-weight: 600; padding: 8px; border-radius: 9px; border: none; color: #c9b8ba; background: transparent; cursor: pointer; }
+    .ts-tabs button[aria-selected="true"] { background: var(--panel-2); color: white; box-shadow: inset 0 0 0 1px var(--border); }
+    #ts-auth-submit { width: 100%; margin-top: 4px; }
+    .ts-remember { display: flex; align-items: center; gap: 8px; font-size: .82rem; color: #d4c4c6; margin: 2px 0 8px; cursor: pointer; text-align: left; }
+    .ts-remember input { width: 16px; height: 16px; accent-color: var(--accent); }
+    .ts-switch-line { font-size: .84rem; color: #c9b8ba; margin: 14px 0 0; }
+    .ts-divider { display: flex; align-items: center; gap: 10px; color: #8b6f73; font-size: .75rem; margin: 16px 0 12px; }
+    .ts-divider::before, .ts-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+    #ts-guest-btn { width: 100%; }
+
+    /* Customization panel */
+    #ts-panel-backdrop { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.35); }
+    #ts-panel-backdrop[hidden], #ts-panel[hidden] { display: none; }
+    #ts-panel {
+        position: fixed; top: 70px; right: 18px; z-index: 81; width: min(380px, calc(100vw - 24px));
+        max-height: calc(100vh - 90px); overflow-y: auto; overscroll-behavior: contain;
+        background: rgba(var(--panel-rgb), 0.97); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 18px 40px rgba(0,0,0,.6);
+        padding: 16px; animation: ts-pop .18s ease;
+    }
+    @keyframes ts-pop { from { opacity: 0; transform: translateY(-6px) scale(.98); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { #ts-panel { animation: none; } }
+    @media (max-width: 560px) { #ts-panel { top: auto; bottom: 12px; right: 12px; left: 12px; width: auto; max-height: calc(100vh - 24px); } }
+    .ts-panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .ts-panel-head h2 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+    .ts-section { border-top: 1px solid var(--border); padding: 14px 0 4px; }
+    .ts-section:first-of-type { border-top: none; padding-top: 4px; }
+    .ts-section h3 { margin: 0 0 10px; font-size: .78rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #bfaeb0; }
+    .ts-color-row { display: flex; align-items: center; gap: 10px; }
+    #ts-color { width: 48px; height: 42px; padding: 0; border: 1px solid var(--border); border-radius: 10px; background: none; cursor: pointer; flex: none; }
+    #ts-color::-webkit-color-swatch-wrapper { padding: 3px; } #ts-color::-webkit-color-swatch { border: none; border-radius: 7px; }
+    #ts-color::-moz-color-swatch { border: none; border-radius: 7px; }
+    #ts-hex { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; text-transform: lowercase; }
+    .ts-swatches { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .ts-swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(255,255,255,.18); cursor: pointer; padding: 0; }
+    .ts-swatch[aria-pressed="true"] { border-color: white; }
+    .ts-bg-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .ts-toggle { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; font-size: .85rem; user-select: none; }
+    .ts-switch-input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+    .ts-switch-track { width: 40px; height: 22px; border-radius: 999px; background: #3f3f46; position: relative; transition: background .2s; flex: none; }
+    .ts-switch-track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: white; transition: transform .2s; }
+    .ts-switch-input:checked + .ts-switch-track { background: var(--accent); }
+    .ts-switch-input:checked + .ts-switch-track::after { transform: translateX(18px); }
+    .ts-preview { margin-top: 12px; display: flex; gap: 12px; align-items: center; }
+    .ts-preview[hidden] { display: none; }
+    .ts-preview img { width: 96px; height: 60px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border); background: var(--panel-2); }
+    .ts-preview-info { flex: 1; min-width: 0; font-size: .78rem; color: #c9b8ba; line-height: 1.4; }
+    .ts-preview-info strong { display: block; color: white; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ts-status-line { display: flex; align-items: center; gap: 8px; font-size: .84rem; margin-bottom: 8px; }
+    .ts-sync-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .ts-games { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+    .ts-games li { background: rgba(0,0,0,.2); border: 1px solid var(--border); border-radius: 10px; padding: 9px 10px; font-size: .8rem; }
+    .ts-games li .ts-game-top { display: flex; align-items: center; gap: 8px; }
+    .ts-games li .ts-game-top span:nth-child(2) { flex: 1; font-weight: 600; }
+    .ts-games li .ts-game-sub { color: #a89597; margin-top: 4px; }
+    .ts-games li .ts-sync-actions { margin-top: 6px; }
+    .ts-panel-foot { border-top: 1px solid var(--border); margin-top: 10px; padding-top: 14px; display: flex; justify-content: flex-end; }
+
+    /* Dialog + toast */
+    #ts-dialog { position: fixed; inset: 0; z-index: 10050; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.55); }
+    #ts-dialog[hidden] { display: none; }
+    .ts-dialog { width: min(440px, 100%); background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 20px; box-shadow: 0 24px 60px rgba(0,0,0,.6); max-height: calc(100vh - 40px); overflow-y: auto; }
+    .ts-dialog h3 { margin: 0 0 10px; font-size: 1.1rem; font-weight: 700; }
+    #ts-dialog-body { font-size: .9rem; color: #e4d4d6; line-height: 1.5; }
+    #ts-dialog-body p { margin: 0 0 8px; }
+    .ts-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+    #ts-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 10100; max-width: min(520px, calc(100vw - 32px));
+        background: var(--panel-2); border: 1px solid var(--border); color: white; padding: 10px 14px; border-radius: 12px; font-size: .85rem;
+        box-shadow: 0 12px 30px rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .2s; }
+    #ts-toast.show { opacity: 1; }
+    #ts-toast.error { border-color: rgba(244, 63, 94, .6); }
+    .ts-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+
+<script>
+    // =====================================================================
+    //  TABSPACE CONFIG — paste your Firebase web config below (see README).
+    //  Only Realtime Database is used. Only `databaseURL` is actually needed;
+    //  the other fields may be pasted as-is from the Firebase console.
+    //  Leave databaseURL "" to run in guest-only mode (accounts disabled).
+    //  These values are public by design — they are not secrets. Security
+    //  comes from the Realtime Database rules (database.rules.json).
+    //
+    //  IMAGE_HOST: optional Cloudinary *unsigned* upload preset for synced
+    //  background images. Leave blank for device-only images.
+    // =====================================================================
+    window.TABSPACE_CONFIG = {
+        FIREBASE_CONFIG: {
+            apiKey: "",
+            authDomain: "",
+            databaseURL: "",          // e.g. "https://your-project-default-rtdb.firebaseio.com"
+            projectId: "",
+            storageBucket: "",
+            messagingSenderId: "",
+            appId: ""
+        },
+        IMAGE_HOST: { provider: "cloudinary", cloudName: "", uploadPreset: "" }
+    };
+
+    // ---------- Theme helpers (run early so saved colors apply before first paint) ----------
+    window.TSTheme = (function () {
+        const DEFAULT = '#ef4444';
+        const LS_KEY = 'tabspace:settings:v1';
+        const VARS = ['--accent','--accent-rgb','--accent-dark','--accent-dark-rgb','--accent-glow','--accent-light',
+            '--accent-ink','--accent-text','--bg','--bg-rgb','--panel','--panel-rgb','--panel-2','--border','--panel-hi-rgb'];
+        function normHex(v) {
+            if (typeof v !== 'string') return null;
+            let s = v.trim().toLowerCase();
+            if (s[0] !== '#') s = '#' + s;
+            if (/^#[0-9a-f]{3}$/.test(s)) s = '#' + s[1] + s[1] + s[2] + s[2] + s[3] + s[3];
+            return /^#[0-9a-f]{6}$/.test(s) ? s : null;
+        }
+        const rgbOf = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+        const toHex = c => '#' + c.map(x => Math.round(Math.max(0, Math.min(255, x))).toString(16).padStart(2, '0')).join('');
+        const mix = (a, b, t) => a.map((x, i) => x + (b[i] - x) * t);
+        function rgbToHsl([r, g, b]) {
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2;
+            if (max === min) return [0, 0, l];
+            const d = max - min, s = l > .5 ? d / (2 - max - min) : d / (max + min);
+            let h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+            return [h * 60, s, l];
+        }
+        function hslToRgb(h, s, l) {
+            const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+            const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+            return [f(0) * 255, f(8) * 255, f(4) * 255];
+        }
+        function lum(c) {
+            const [r, g, b] = c.map(v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); });
+            return .2126 * r + .7152 * g + .0722 * b;
+        }
+        const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+        function derive(hex) {
+            const c = rgbOf(hex);
+            const [h, s] = rgbToHsl(c);
+            const sat = Math.min(1, s * 1.15);
+            const bg = hslToRgb(h, .38 * sat, .031), panel = hslToRgb(h, .33 * sat, .076), panel2 = hslToRgb(h, .33 * sat, .106);
+            const border = hslToRgb(h, .38 * sat, .165), panelHi = hslToRgb(h, .5 * sat, .157);
+            const dark = mix(c, [0, 0, 0], .23);
+            let text = c.slice(); let guard = 0;
+            while (contrast(text, panel) < 4.5 && guard++ < 20) text = mix(text, [255, 255, 255], .12);
+            const ink = contrast([255, 255, 255], c) >= contrast([17, 17, 17], c) ? '#ffffff' : '#111111';
+            return {
+                '--accent': hex, '--accent-rgb': c.join(', '), '--accent-dark': toHex(dark),
+                '--accent-dark-rgb': dark.map(Math.round).join(', '), '--accent-glow': 'rgba(' + c.join(', ') + ', 0.35)',
+                '--accent-light': toHex(mix(c, [255, 255, 255], .55)), '--accent-ink': ink, '--accent-text': toHex(text),
+                '--bg': toHex(bg), '--bg-rgb': bg.map(Math.round).join(', '), '--panel': toHex(panel),
+                '--panel-rgb': panel.map(Math.round).join(', '), '--panel-2': toHex(panel2), '--border': toHex(border),
+                '--panel-hi-rgb': panelHi.map(Math.round).join(', ')
+            };
+        }
+        function apply(hex) {
+            const root = document.documentElement.style;
+            const n = normHex(hex) || DEFAULT;
+            if (n === DEFAULT) { VARS.forEach(v => root.removeProperty(v)); return n; } // exact original theme
+            const vars = derive(n);
+            for (const k in vars) root.setProperty(k, vars[k]);
+            return n;
+        }
+        function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+        function defaults() { return { schema: 1, themeColor: DEFAULT, interactiveBg: true, bgImage: null, updatedAt: 0, owner: null, syncedAt: 0 }; }
+        function load() {
+            const d = defaults();
+            try {
+                const raw = localStorage.getItem(LS_KEY);
+                if (!raw) return d;
+                const s = JSON.parse(raw);
+                if (!s || typeof s !== 'object') return d;
+                return {
+                    ...s, schema: 1,
+                    themeColor: normHex(s.themeColor) || DEFAULT,
+                    interactiveBg: typeof s.interactiveBg === 'boolean' ? s.interactiveBg : true,
+                    bgImage: s.bgImage && typeof s.bgImage === 'object' ? s.bgImage : null,
+                    updatedAt: +s.updatedAt || 0, owner: typeof s.owner === 'string' ? s.owner : null, syncedAt: +s.syncedAt || 0
+                };
+            } catch (e) { return d; }
+        }
+        function save(s) {
+            try { localStorage.setItem(LS_KEY, JSON.stringify(s)); return true; } catch (e) { return false; }
+        }
+        const boot = load();
+        apply(boot.themeColor);
+        return { DEFAULT, LS_KEY, normHex, apply, cssVar, load, save, defaults, boot };
+    })();
+</script>
+
+</head>
+<body>
+
+    <!-- ===== Added: custom background image layer (behind the particle canvas) ===== -->
+    <div id="bg-image" aria-hidden="true"></div>
+    <!-- Interactive particle background -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Search bar (top middle) -->
+    <div id="search-wrap">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input id="search" type="text" placeholder="Search games..." autocomplete="off" spellcheck="false">
+    </div>
+    <button id="home-btn" onclick="closeGamesView()"><i class="fa-solid fa-house"></i> Home</button>
+
+    <!-- Home screen: just the name + logo -->
+    <div id="home">
+        <img src="https://core-logic-utils.github.io/assets/tabspacelogo.png" alt="Tabspace logo">
+        <h1>Tabspace</h1>
+    </div>
+
+    <!-- Games view (filled from the GAMES list below) -->
+    <div id="games-view">
+        <div id="games-grid"></div>
+        <p id="no-results">No games found.</p>
+    </div>
+
+    <!-- Controller button + upward dropdown (menu filled from MENU_ITEMS below) -->
+    <div id="launcher">
+        <div id="menu-wrap"><div class="menu" id="menu"></div></div>
+        <button id="launcher-btn" aria-label="Menu"><i class="fa-solid fa-gamepad"></i></button>
+        <!-- added: sign-out (or guest sign-in) button, shown when the menu is open -->
+        <button id="ts-signout-btn" type="button" aria-label="Sign out" title="Sign out" hidden><i class="fa-solid fa-right-from-bracket"></i></button>
+    </div>
+
+    <!-- In-page game player -->
+    <div id="game-container">
+        <button id="back-btn" onclick="closeGame()" aria-label="Back"><i class="fa-solid fa-arrow-left"></i></button>
+        <div id="loading-text" style="display:none; color:white; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:1.5rem; font-weight:600; z-index: 9999;">Loading...</div>
+        <iframe id="game-frame" allowfullscreen></iframe>
+    </div>
+
+    <!-- ===== Added: customization button, sync status, panel ===== -->
+    <div id="ts-sync-pill" aria-hidden="true"><span class="ts-dot"></span><span></span></div>
+    <button id="ts-custom-btn" class="ts-iconbtn" type="button" aria-label="Customize" aria-haspopup="dialog" aria-expanded="false" aria-controls="ts-panel" title="Customize"><i class="fa-solid fa-palette"></i></button>
+    <div id="ts-panel-backdrop" hidden></div>
+    <aside id="ts-panel" role="dialog" aria-modal="true" aria-labelledby="ts-panel-title" hidden>
+        <div class="ts-panel-head">
+            <h2 id="ts-panel-title">Customize</h2>
+            <button id="ts-panel-close" class="ts-iconbtn" type="button" aria-label="Close customization" style="width:34px;height:34px;font-size:.9rem"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <section class="ts-section" aria-labelledby="ts-h-theme">
+            <h3 id="ts-h-theme">Theme color</h3>
+            <div class="ts-color-row">
+                <input id="ts-color" type="color" value="#ef4444" aria-label="Theme color picker">
+                <div style="flex:1">
+                    <label class="ts-sr" for="ts-hex">Hex color</label>
+                    <input id="ts-hex" class="ts-input" type="text" inputmode="text" maxlength="7" spellcheck="false" autocomplete="off" placeholder="#ef4444" aria-describedby="ts-hex-error">
+                </div>
+            </div>
+            <p id="ts-hex-error" class="ts-error" role="alert"></p>
+            <div class="ts-swatches" id="ts-swatches" role="group" aria-label="Preset colors"></div>
+        </section>
+        <section class="ts-section" aria-labelledby="ts-h-bg">
+            <h3 id="ts-h-bg">Background</h3>
+            <div class="ts-bg-row">
+                <button id="ts-bg-upload" class="ts-btn ts-btn-sm" type="button"><i class="fa-solid fa-image"></i> Upload image</button>
+                <input id="ts-bg-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+                <label class="ts-toggle" for="ts-bg-toggle">
+                    <input id="ts-bg-toggle" class="ts-switch-input" type="checkbox" role="switch" checked>
+                    <span class="ts-switch-track" aria-hidden="true"></span>
+                    <span>Interactive background</span>
+                </label>
+            </div>
+            <p id="ts-img-note" class="ts-hint"></p>
+            <div id="ts-bg-preview" class="ts-preview" hidden>
+                <img id="ts-bg-thumb" alt="Background image preview">
+                <div class="ts-preview-info">
+                    <strong id="ts-bg-name"></strong>
+                    <span id="ts-bg-dims"></span><br>
+                    <span id="ts-bg-status"></span>
+                </div>
+                <button id="ts-bg-remove" class="ts-btn ts-btn-sm ts-btn-danger" type="button" aria-label="Remove background image"><i class="fa-solid fa-trash"></i></button>
+            </div>
+            <p id="ts-bg-error" class="ts-error" role="alert"></p>
+        </section>
+        <section class="ts-section" aria-labelledby="ts-h-acct">
+            <h3 id="ts-h-acct">Account &amp; saves</h3>
+            <div id="ts-account"></div>
+        </section>
+        <div class="ts-panel-foot">
+            <button id="ts-reset" class="ts-btn ts-btn-sm ts-btn-danger" type="button"><i class="fa-solid fa-rotate-left"></i> Reset customization</button>
+        </div>
+    </aside>
+
+    <!-- ===== Added: sign-in / sign-up screen ===== -->
+    <div id="ts-auth" role="dialog" aria-modal="true" aria-labelledby="ts-auth-title">
+        <div class="ts-auth-card">
+            <img src="https://core-logic-utils.github.io/assets/tabspacelogo.png" alt="">
+            <h2 id="ts-auth-title">Tabspace</h2>
+            <div id="ts-auth-checking" class="ts-auth-state" role="status"><span class="ts-spinner"></span><span id="ts-auth-checking-text">Checking your session…</span></div>
+            <div id="ts-auth-forms" hidden>
+                <div class="ts-tabs" role="tablist" aria-label="Account">
+                    <button id="ts-tab-signin" type="button" role="tab" aria-selected="true">Sign In</button>
+                    <button id="ts-tab-signup" type="button" role="tab" aria-selected="false">Sign Up</button>
+                </div>
+                <div id="ts-auth-notice" class="ts-notice" role="status" hidden></div>
+                <form id="ts-auth-form" novalidate>
+                    <div class="ts-field">
+                        <label class="ts-label" for="ts-username">Username</label>
+                        <input id="ts-username" class="ts-input" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="20" required>
+                        <p id="ts-user-hint" class="ts-hint" hidden>3–20 characters: letters, numbers, underscores.</p>
+                    </div>
+                    <div class="ts-field">
+                        <label class="ts-label" for="ts-password">Password</label>
+                        <input id="ts-password" class="ts-input" type="password" autocomplete="current-password" maxlength="128" required>
+                        <p id="ts-pass-hint" class="ts-hint" hidden>At least 8 characters.</p>
+                    </div>
+                    <div class="ts-field" id="ts-confirm-wrap" hidden>
+                        <label class="ts-label" for="ts-confirm">Confirm password</label>
+                        <input id="ts-confirm" class="ts-input" type="password" autocomplete="new-password" maxlength="128">
+                    </div>
+                    <label class="ts-remember"><input id="ts-remember" type="checkbox" checked> Keep me signed in on this device</label>
+                    <p id="ts-auth-error" class="ts-error" role="alert"></p>
+                    <button id="ts-auth-submit" class="ts-btn ts-btn-primary" type="submit"><span class="ts-spinner" hidden></span><span class="lbl">Sign In</span></button>
+                </form>
+                <p class="ts-switch-line"><span id="ts-switch-text">New here?</span> <button id="ts-switch-btn" class="ts-link" type="button">Create an account</button></p>
+                <div class="ts-divider"><span>or</span></div>
+                <button id="ts-guest-btn" class="ts-btn ts-btn-ghost" type="button"><i class="fa-solid fa-user-secret"></i> Continue as Guest</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Added: confirmation dialog + toast ===== -->
+    <div id="ts-dialog" hidden>
+        <div class="ts-dialog" role="alertdialog" aria-modal="true" aria-labelledby="ts-dialog-title" aria-describedby="ts-dialog-body">
+            <h3 id="ts-dialog-title"></h3>
+            <div id="ts-dialog-body"></div>
+            <div id="ts-dialog-actions" class="ts-dialog-actions"></div>
+        </div>
+    </div>
+    <div id="ts-toast" role="status" aria-live="polite"></div>
+
+<script>
+    // =====================================================================
+    //  EDIT HERE — DROPDOWN MENU ITEMS
+    //  Each item: { label, icon, type, url }   (icon = Font Awesome class)
+    //  type is one of:
+    //    "game"              -> launchGame
+    //    "prox"              -> launchProxGame
+    //    "protected"         -> launchProtectedGame
+    //    "protectedProx"     -> launchProtectedProxGame
+    //    "altProtected"      -> launchAltProtectedGame
+    //    "altProtectedProx"  -> launchAltProtectedProxGame
+    //  Special: { type: "games" } opens the games list.
+    //  Nested: give an item a  children: [ ...items ]  array for a fly-out.
+    // =====================================================================
+    const MENU_ITEMS = [
+        { label: "Games", icon: "fa-solid fa-gamepad", type: "games" },
+        { label: "FireFox (beta)", icon: "fa-brands fa-firefox-browser", type: "prox", url: "https://joblanguageabilities.wasmer.app" },
+        { label: "Chat", icon: "fa-solid fa-comments", children: [
+            { label: "Chat 1", icon: "fa-solid fa-message", type: "prox", url: "https://core-logic-utils.github.io/utils/bggms/cht" },
+            { label: "Chat 2", icon: "fa-regular fa-message", type: "protectedProx", url: "https://core-logic-utils.github.io/utils/bggms/cht/task" }
+        ]},
+        { label: "suggestions", icon: "fa-solid fa-lightbulb", type: "game", url: "https://tesr-26868.wasmer.app/suggestions" },
+        { label: "Al", icon: "fa-solid fa-robot", type: "game", url: "https://tesr-26868.wasmer.app" },
+        { label: "Streamflix", icon: "fa-solid fa-film", type: "game", url: "https://flowingtasks.base44.app" },
+        { label: "Key Console", icon: "fa-solid fa-key", type: "altProtected", url: "https://joblinguisticability.wasmer.app" }
+    ];
+
+    // =====================================================================
+    //  EDIT HERE — GAME BLOCKS
+    //  Each game: { name, img, url, type }  — type uses the same values as above.
+    //  Add a line to add a game, delete a line to remove one.
+    // =====================================================================
+    const GAMES = [
+    { name: "Grand Theft Auto V", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgiivGZ6qruXhAvoBgKNusibksRuX6m4-Tlu0FUZs55w&s=10", url: "https://fiveplay.lol", type: "game" },
+    { name: "ULTRAKILL", img: "https://ih1.redbubble.net/image.5278972926.4485/flat,750x,075,f-pad,750x1000,f8f8f8.jpg", url: "https://db.duck.exampredictor.org/html/ultrakill/index.html", type: "game" },
+    { name: "Highway Traffic 3D", img: "https://imgs.crazygames.com/games/highway-racer/cover-1655194175251.png?metadata=none&quality=100&width=1200&height=630&fit=crop", url: "https://funny-school.github.io/h1/highwaytraffic3d/", type: "prox" },
+    { name: "World Guesser", img: "https://cdn.jsdelivr.net/gh/mathlesson/mathlesson.github.io/img3/world-guesser.jpg", url: "https://db2.exampredictor.org/2026/more/worldguessr/pre.html", type: "game" },
+    { name: "Drift Boss", img: "https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/driftboss.webp", url: "https://db.duck.exampredictor.org/html/drift_boss/index.html", type: "game" },
+    { name: "Snow Rider 3D", img: "https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/snowrider3d.webp", url: "https://db.duck.exampredictor.org/html/snow_rider_3d/index.html", type: "game" },
+    { name: "Race Survival Arena King", img: "https://drift-hunters.io/data/image/game/race-survival-arena-king.png", url: "https://db.duck.exampredictor.org/html/race_survival_arena_king/index.html", type: "game" },
+    { name: "Gun Spin", img: "https://tse4.mm.bing.net/th/id/OIP.Bg7qEtTEG2VmtTWPoOmilgAAAA?w=300&h=300&rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/gun_spin/index.html", type: "game" },
+    { name: "Minecraft", img: "https://images.icon-icons.com/2699/PNG/512/minecraft_logo_icon_168974.png", url: "https://db.duck.exampredictor.org/html/minecraft/index.html", type: "game" },
+    { name: "Minecraft 1.12", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQysbQQjHe_Fdw39GG7_hPrk_5yc_SHChsQf70x9EU9s_tuWlHbNGb21yvD&s=10", url: "https://utilitationaries.wasmer.app", type: "game" },
+    { name: "Minecraft 26.2", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQysbQQjHe_Fdw39GG7_hPrk_5yc_SHChsQf70x9EU9s_tuWlHbNGb21yvD&s=10", url: "https://crafting-logistics.wasmer.app", type: "game" },
+    { name: "Drive Mad", img: "https://play-lh.googleusercontent.com/V_egAxch0phxs10H_Z1QpWRrsH4phd8egT_5ZjYlFbXzXvwpUGpmJMn2h6HgbGkSlZSM", url: "https://db.duck.exampredictor.org/html/drive_mad/index.html", type: "game" },
+    { name: "Ragdoll Archers", img: "https://play-lh.googleusercontent.com/XMiWEMPbuq13oVcwYQ6ySLtZnBf7WpJ3rb7v-TM4MdFOvWfo1Z2hzSEAApRXzEcshjY", url: "https://db.duck.exampredictor.org/html/ragdoll_archers/index.html", type: "game" },
+    { name: "Steal A Brainrot", img: "https://play-lh.googleusercontent.com/iR1JNfTr0W_fDN8zAfuZYPYHdVjI1UzNSVFkbAyXwN8e3jEuKsyu73zqjVdHDxNEfQqLhC78EaPzZPtWNL-X", url: "https://db.duck.exampredictor.org/html/steal_a_brainrot_2/index.html", type: "game" },
+    { name: "Buckshot Roulette", img: "https://i.ytimg.com/vi/hGIG6hKEHI0/hqdefault.jpg", url: "https://db.duck.exampredictor.org/html/buckshot_roulette/index.html", type: "game" },
+    { name: "Gladihoppers", img: "https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/gladi-hoppers.webp", url: "https://db.duck.exampredictor.org/html/gladihoppers/index.html", type: "game" },
+    { name: "Dune", img: "https://cyberscore.me.uk/uploads/boxarts/29ece470dffb95f7d71a456cc7d09847ffcd135b99a903eb11e48f31737537e7", url: "https://db.duck.exampredictor.org/html/dune/index.html", type: "game" },
+    { name: "Granny", img: "https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/granny.webp", url: "https://db.duck.exampredictor.org/html/granny/index.html", type: "game" },
+    { name: "Retro Bowl", img: "https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/retro_bowl_icon.webp", url: "https://db.duck.exampredictor.org/html/retro_bowl/index.html", type: "game" },
+    { name: "Plants vs Zombies", img: "https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/pvz.webp", url: "https://db.duck.exampredictor.org/html/pvz/index.html", type: "game" },
+    { name: "Clash Royale", img: "https://play-lh.googleusercontent.com/gnSC6s8-6Tjc4uhvDW7nfrSJxpbhllzYhgX8y374N1LYvWBStn2YhozS9XXaz1T_Pi2q", url: "https://db.duck.exampredictor.org/html/clash_royale/index.html", type: "game" },
+    { name: "Grow A Garden", img: "https://tse4.mm.bing.net/th/id/OIP.Ypa2emBTNGLNqI-GCcOTVwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/grow_a_garden/index.html", type: "game" },
+    { name: "Doom 1", img: "https://tse3.mm.bing.net/th/id/OIP.pCsxsLOZPs3R50v8u9utIAHaHa?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/doom_1/index.html", type: "game" },
+    { name: "Cod Zombies Portable", img: "https://img.itch.zone/aW1nLzE1ODIwNTg2LmpwZWc=/347x500/HFlGj%2F.jpeg", url: "https://db.duck.exampredictor.org/html/cod_zombies_portable/index.html", type: "game" },
+    { name: "Flappy Bird", img: "https://upload.wikimedia.org/wikipedia/en/thumb/0/0a/Flappy_Bird_icon.png/250px-Flappy_Bird_icon.png", url: "https://db.duck.exampredictor.org/html/flappy_bird/index.html", type: "game" },
+    { name: "Blocky Puzzle", img: "https://tse2.mm.bing.net/th/id/OIP.PaWvrNBq1YV_cRtWPC_fAQHaDt?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/blocky_puzzle/index.html", type: "game" },
+    { name: "Level Devil", img: "https://play-lh.googleusercontent.com/VqY_7ZNxG91KHaZguRP3khXdlTR1yQr45RCoiNu6MO41UhN-jlN31YWTQImWFRTw5r0", url: "https://db.duck.exampredictor.org/html/level_devil/index.html", type: "game" },
+    { name: "Idle Ants", img: "https://tse2.mm.bing.net/th/id/OIP.7pxg2FH7po2AJTov3DK29gHaE-?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/idle_ants/index.html", type: "game" },
+    { name: "Rocket Soccer Derby", img: "https://tse1.mm.bing.net/th/id/OIP.klsiFaM8oq4FY0Xy6tgFdAHaEK?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/rocket_soccer_derby/index.html", type: "game" },
+    { name: "Five Nights at Freddy's", img: "https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/fnaf.webp", url: "https://db.duck.exampredictor.org/html/fnaf/index.html", type: "game" },
+    { name: "Five Nights at Freddy's 2", img: "https://tse3.mm.bing.net/th/id/OIP.ubgUZW8mCKHtQkFRkmrjugHaEK?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/fnaf2/index.html", type: "game" },
+    { name: "Five Nights at Freddy's 3", img: "https://th.bing.com/th/id/OIP.hu5L5v9bNtOztjb1cuii9QAAAA?o=7rm=3&rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/fnaf3/index.html", type: "game" },
+    { name: "Five Nights at Freddy's 4", img: "https://th.bing.com/th/id/OIP.NeBel8AXZVWzECeQPKymPgHaLH?o=7rm=3&rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/fnaf4/index.html", type: "game" },
+    { name: "Among Us", img: "https://tse2.mm.bing.net/th/id/OIP.RZStwTG6egmUl_MLnuPWOgAAAA?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/among_us/index.html", type: "game" },
+    { name: "Ovo", img: "https://th.bing.com/th/id/OIP.0bg0p39bi_SAaj4_0aBXqQAAAA?o=7rm=3&rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/ovo/index.html", type: "game" },
+    { name: "Ovo 3D", img: "https://tse3.mm.bing.net/th/id/OIP.Ha2A0mZ8tQs30byqjUe7dgAAAA?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/ovo_3d/index.html", type: "game" },
+    { name: "Golf Orbit", img: "https://th.bing.com/th/id/OIP.c1oGt7rSoCuh1Dgun8C9uwHaEo?o=7rm=3&rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/golf_orbit/index.html", type: "game" },
+    { name: "Hole.io", img: "https://tse1.mm.bing.net/th/id/OIP.Kf_fGqzBgXEGkUOcXxb1swHaEp?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/holeio/index.html", type: "game" },
+    { name: "Retro Bowl College", img: "https://img.poki-cdn.com/cdn-cgi/image/quality=78,width=314,height=314,fit=cover,f=auto/d98547374c4129bf441b754d495e41aa.png", url: "https://db.duck.exampredictor.org/html/retro_bowl_college/index.html", type: "game" },
+    { name: "Crossy Road", img: "https://tse3.mm.bing.net/th/id/OIP.J6SpCB39Qcq1_R_549HkuAHaEK?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/crossy_road/index.html", type: "game" },
+    { name: "Pac-Man", img: "https://tse1.mm.bing.net/th/id/OIP.UdWMHPLDo4YkUDQaQ6qWLgHaEK?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/pacman/index.html", type: "game" },
+    { name: "Basketball Legends", img: "https://tse1.mm.bing.net/th/id/OIP.ollyg9Yd7zX9DNtnkzsc-gHaEJ?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/basketball_legends/index.html", type: "game" },
+    { name: "stick man hook", img: "https://tse4.mm.bing.net/th/id/OIP.sQ14jgEl4arBwdVbKU6jPQHaDt?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/stickman_hook/index.html", type: "game" },
+    { name: "Football Legends", img: "https://tse2.mm.bing.net/th/id/OIP.Uj1NAnSPqXVhy_FB4WjztQHaE6?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/football_legends/index.html", type: "game" },
+    { name: "Football Bros", img: "https://tse4.mm.bing.net/th/id/OIP.mHrpshy1jVrnBwPpelkBogHaFm?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/football_bros/index.html", type: "game" },
+    { name: "Baseball Bros", img: "https://baseballbrosonline.com/baseball_bros.webp", url: "https://db.duck.exampredictor.org/html/baseball_bros/index.html", type: "game" },
+    { name: "Incredibox", img: "https://tse1.mm.bing.net/th/id/OIP.OHLnUodkpgudeCKXD46q_AHaE8?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/incredibox/index.html", type: "game" },
+    { name: "Ragdoll Hit", img: "https://play-lh.googleusercontent.com/pgyh6s739muPERP1IHMjk-IF2jR3T5ePVOn7YCWWzNl4KffphO8jf2yM2FtzagPEs4c", url: "https://db.duck.exampredictor.org/html/ragdoll_hit/index.html", type: "game" },
+    { name: "Funny Shooter 2", img: "https://tse4.mm.bing.net/th/id/OIP.2Q8MOCpbH0KjJJiiPiosfgHaE8?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/funny_shooter_2/index.html", type: "game" },
+    { name: "Angry Birds: Slingshot Frenzy", img: "https://tse3.mm.bing.net/th/id/OIP.78D27BPgh-1OdwLjAuUNaQAAAA?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/angry_birds_slingshot_frenzy/index.html", type: "game" },
+    { name: "Super Mario Bros", img: "https://tse1.mm.bing.net/th/id/OIP.k2A_4WGUjMCTg8LVHitXpAHaEK?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/super_mario_bros/index.html", type: "game" },
+    { name: "Jetpack Joyride", img: "https://tse2.mm.bing.net/th/id/OIP.TacYklvbUR6Dlo2HB5wgIgHaEX?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/jetpack_joyride/index.html", type: "game" },
+    { name: "Deadly Descent", img: "https://www.yoosfuhl.com/wp-content/uploads/2024/11/Deadly-Descent-game.jpg", url: "https://db.duck.exampredictor.org/html/deadly_descent/index.html", type: "game" },
+    { name: "Time Shooter 2", img: "https://tse1.mm.bing.net/th/id/OIP.A9x_AIJ7AnHWagCQ6fbrmQHaE8?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/time_shooter_2/index.html", type: "game" },
+    { name: "Wrestle Bros", img: "https://tse2.mm.bing.net/th/id/OIP.sT6oGIXhzuEfDxxEAVX_8wHaD4?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/wrestle_bros/index.html", type: "game" },
+    { name: "Cluster Rush", img: "https://tse2.mm.bing.net/th/id/OIP.KsTBOwXuX8Xd3hTeTgkazAHaEJ?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/cluster_rush/index.html", type: "game" },
+    { name: "Helix Jump", img: "https://tse2.mm.bing.net/th/id/OIP.mVlk-Fq5HwQrL8F6GvC_sQHaDt?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/helix_jump/index.html", type: "game" },
+    { name: "Crazy Cattle 3D", img: "https://tse1.mm.bing.net/th/id/OIP.p30qwEtHztscp-8acW-jUAHaHz?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/crazycattle3d/index.html", type: "game" },
+    { name: "Cookie Clicker", img: "https://tse3.mm.bing.net/th/id/OIP.7AdJWAz2PPfduGAQvsXZiQHaEo?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://thenetworklogic.wasmer.app/bggms/ckyclkr/", type: "game" },
+    { name: "Cookie Clicker Prox (if Cookie Clicker doesnt work try this one)", img: "https://tse3.mm.bing.net/th/id/OIP.7AdJWAz2PPfduGAQvsXZiQHaEo?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://core-logic-utils.github.io/utils/bggms/ckyclkr", type: "prox" },
+    { name: "Arcane Archer", img: "https://img.poki-cdn.com/cdn-cgi/image/quality=78,width=314,height=314,fit=cover,f=auto/b0969647f5a6a6ad4ecdbd64fd3eb9c6.jfif", url: "https://db.duck.exampredictor.org/html/arcane_archer/index.html", type: "game" },
+    { name: "Archer Master 3D: Castle Defender", img: "https://m.media-amazon.com/images/I/81m4VWbUg6L.png", url: "https://db.duck.exampredictor.org/html/archer_master_3d_castle_defender/index.html", type: "game" },
+    { name: "Slope", img: "https://raw.githubusercontent.com/duckmath/icons/refs/heads/main/slope.webp", url: "https://db.duck.exampredictor.org/html/slope/index.html", type: "game" },
+    { name: "Tabs", img: "https://tse3.mm.bing.net/th/id/OIP.Wn-irTAp75THDKGfCI7pwwHaEK?rs=1&pid=ImgDetMain&o=7&rm=3", url: "https://db.duck.exampredictor.org/html/tabs/index.html", type: "game" },
+    { name: "Portal", img: "https://th.bing.com/th/id/R.45cd86008f2d878441ec2a207a0ff5db?rik=bGgFcBRKBE%2beOA&pid=ImgRaw&r=0", url: "https://db.duck.exampredictor.org/html/portal_tfv/index.html", type: "game" },
+    { name: "Bridge Race", img: "https://play-lh.googleusercontent.com/ym7hOY7sjtsuZ-CR2tmvtsNEgPTkufUPKdaUKcNHOvJS3bf7CIxA7Eyc23FbnzziPsc", url: "https://db.duck.exampredictor.org/html/bridge_race/index.html", type: "game" },
+    { name: "Galatrix", img: "IMAGE_URL", url: "https://db.duck.exampredictor.org/html/galatrix/index.html", type: "game" },
+    { name: "Drift King", img: "IMAGE_URL", url: "https://db.duck.exampredictor.org/html/drift-king/index.html", type: "game" },
+    { name: "Snek Io", img: "IMAGE_URL", url: "https://db.duck.exampredictor.org/html/snek-io/index.html", type: "game" },
+    { name: "GTA Simulator", img: "IMAGE_URL", url: "https://db.duck.exampredictor.org/html/gta-simulator/index.html", type: "game" },
+    ];
+
+    // ========== INTERACTIVE PARTICLE BACKGROUND ==========
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let mouse = { x: null, y: null, radius: 120 };
+    let animationId = null;
+    let bgEffectOn = false;                 // added: interactive background toggle state
+    let particleRGB = '239, 68, 68';        // added: follows the theme color
+    let trailRGB = '11, 5, 6';
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    class Particle {
+        constructor() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.size = Math.random() * 2.2 + 0.8;
+            this.baseX = this.x;
+            this.baseY = this.y;
+            this.density = Math.random() * 25 + 8;
+            this.vx = (Math.random() - 0.5) * 0.4;
+            this.vy = (Math.random() - 0.5) * 0.4;
+            this.alpha = Math.random() * 0.5 + 0.25;
+        }
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${particleRGB}, ${this.alpha})`;
+            ctx.fill();
+        }
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            if (this.x < 0) this.x = canvas.width;
+            if (this.x > canvas.width) this.x = 0;
+            if (this.y < 0) this.y = canvas.height;
+            if (this.y > canvas.height) this.y = 0;
+            if (mouse.x !== null) {
+                const dx = mouse.x - this.x;
+                const dy = mouse.y - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < mouse.radius) {
+                    const force = (mouse.radius - distance) / mouse.radius;
+                    const forceX = (dx / distance) * force * this.density * 0.35;
+                    const forceY = (dy / distance) * force * this.density * 0.35;
+                    this.x -= forceX;
+                    this.y -= forceY;
+                }
+            }
+        }
+    }
+    function initParticles() {
+        particles = [];
+        const numberOfParticles = Math.min(Math.floor((canvas.width * canvas.height) / 9000), 140);
+        for (let i = 0; i < numberOfParticles; i++) particles.push(new Particle());
+    }
+    function connectParticles() {
+        const maxDistance = 110;
+        for (let a = 0; a < particles.length; a++) {
+            for (let b = a + 1; b < particles.length; b++) {
+                const dx = particles[a].x - particles[b].x;
+                const dy = particles[a].y - particles[b].y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < maxDistance) {
+                    const opacity = 1 - (distance / maxDistance);
+                    ctx.strokeStyle = `rgba(${particleRGB}, ${opacity * 0.18})`;
+                    ctx.lineWidth = 0.8;
+                    ctx.beginPath();
+                    ctx.moveTo(particles[a].x, particles[a].y);
+                    ctx.lineTo(particles[b].x, particles[b].y);
+                    ctx.stroke();
+                }
+            }
+        }
+    }
+    function animate() {
+        if (!bgEffectOn) { animationId = null; return; }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = `rgba(${trailRGB}, 0.15)`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => { p.update(); p.draw(); });
+        connectParticles();
+        animationId = requestAnimationFrame(animate);
+    }
+    function onBgMouseMove(e) { mouse.x = e.clientX; mouse.y = e.clientY; }
+    function onBgMouseOut() { mouse.x = null; mouse.y = null; }
+    window.addEventListener('resize', () => { if (bgEffectOn) { resizeCanvas(); initParticles(); } });
+    // added: turn the existing effect on/off without duplicating loops or listeners
+    function setInteractiveBackground(on) {
+        on = !!on;
+        if (on === bgEffectOn) return;
+        bgEffectOn = on;
+        document.body.classList.toggle('bg-effect-off', !on);
+        if (on) {
+            window.addEventListener('mousemove', onBgMouseMove);
+            window.addEventListener('mouseout', onBgMouseOut);
+            resizeCanvas();
+            initParticles();
+            if (animationId === null) animationId = requestAnimationFrame(animate);
+        } else {
+            window.removeEventListener('mousemove', onBgMouseMove);
+            window.removeEventListener('mouseout', onBgMouseOut);
+            if (animationId !== null) { cancelAnimationFrame(animationId); animationId = null; }
+            mouse.x = null; mouse.y = null;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+    function setParticleColors(accentRGB, bgRGB) {
+        if (/^\d{1,3}, ?\d{1,3}, ?\d{1,3}$/.test(accentRGB)) particleRGB = accentRGB;
+        if (/^\d{1,3}, ?\d{1,3}, ?\d{1,3}$/.test(bgRGB)) trailRGB = bgRGB;
+    }
+    resizeCanvas();
+    initParticles();
+    setInteractiveBackground(window.TSTheme ? TSTheme.boot.interactiveBg : true);
+
+    // ========== GAME LOGIC ==========
+    function launchGame(url) {
+        const container = document.getElementById('game-container');
+        const frame = document.getElementById('game-frame');
+        const loading = document.getElementById('loading-text');
+
+        document.body.classList.add('in-game');
+        if (loading) loading.style.display = 'none';
+
+        // clean previous blob if any
+        if (frame._blobUrl) {
+            URL.revokeObjectURL(frame._blobUrl);
+            frame._blobUrl = null;
+        }
+
+        frame.removeAttribute('srcdoc');
+        frame.setAttribute('data-no-proxy', 'true');
+        if (window.TS) TS.gameOpened(url, 'direct');   // added: cloud-save hook
+        frame.src = url;
+
+        frame.style.display = 'block';
+        container.style.display = 'block';
+    }
+
+    async function launchProxGame(url) {
+        const container = document.getElementById('game-container');
+        const frame = document.getElementById('game-frame');
+        const loading = document.getElementById('loading-text');
+
+        document.body.classList.add('in-game');
+        container.style.display = 'block';
+        frame.style.display = 'none';
+        if (loading) {
+            loading.style.display = 'block';
+            loading.innerText = 'Loading...';
+        }
+
+        // clean previous blob
+        if (frame._blobUrl) {
+            URL.revokeObjectURL(frame._blobUrl);
+            frame._blobUrl = null;
+        }
+
+        frame.removeAttribute('srcdoc');
+
+        // KEEP the opt-out so the parent interceptor does not rewrite the blob URL
+        frame.setAttribute('data-no-proxy', 'true');
+
+        if (window.TS) TS.gameOpened(url, 'prox');     // added: cloud-save hook
+        const relayBase = "https://network-aqzh.onrender.com";
+        const proxyUrl = relayBase + "/api/relay?url=" + encodeURIComponent(url);
+
+        try {
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error('Proxy returned ' + response.status);
+
+            const html = await response.text();
+
+            const blob = new Blob([html], { type: 'text/html' });
+            const blobUrl = URL.createObjectURL(blob);
+
+            frame._blobUrl = blobUrl;
+            frame.src = blobUrl;               // now protected by data-no-proxy
+
+            frame.onload = function() {
+                if (loading) loading.style.display = 'none';
+                frame.style.display = 'block';
+            };
+        } catch (err) {
+            console.error(err);
+            if (loading) loading.innerText = 'Failed to load.';
+        }
+    }
+
+    function closeGame() {
+        const container = document.getElementById('game-container');
+        const frame = document.getElementById('game-frame');
+        const loading = document.getElementById('loading-text');
+
+        container.style.display = 'none';
+        document.body.classList.remove('in-game');   // controller button reappears
+
+        if (frame._blobUrl) {
+            URL.revokeObjectURL(frame._blobUrl);
+            frame._blobUrl = null;
+        }
+
+        frame.src = '';
+        frame.removeAttribute('srcdoc');
+        frame.removeAttribute('data-no-proxy');
+        if (loading) loading.style.display = 'none';
+        if (window.TS) TS.gameClosed();               // added: sync any progress the game saved
+    }
+
+    function launchProtectedGame(url) {
+        const password = prompt('Password:');
+        if (password === 'cinnamon29') {
+            launchGame(url);
+        }
+    }
+
+    function launchAltProtectedGame(url) {
+        const password = prompt('Password:');
+        if (password === 'superwater@22') {
+            launchGame(url);
+        }
+    }
+
+    function launchProtectedProxGame(url) {
+        const password = prompt('Password:');
+        if (password === 'cinnamon29') {
+            launchProxGame(url);
+        }
+    }
+
+    function launchAltProtectedProxGame(url) {
+        const password = prompt('Password:');
+        if (password === 'superwater@22') {
+            launchProxGame(url);
+        }
+    }
+
+    // Maps the "type" strings used in MENU_ITEMS / GAMES to the launch functions
+    const LAUNCHERS = {
+        game: launchGame,
+        prox: launchProxGame,
+        protected: launchProtectedGame,
+        protectedProx: launchProtectedProxGame,
+        altProtected: launchAltProtectedGame,
+        altProtectedProx: launchAltProtectedProxGame
+    };
+    function launchByType(type, url) {
+        const fn = LAUNCHERS[type] || launchGame;
+        fn(url);
+    }
+
+    // ========== GAMES VIEW + SEARCH ==========
+    const searchInput = document.getElementById('search');
+    const grid = document.getElementById('games-grid');
+    const noResults = document.getElementById('no-results');
+
+    function renderGames() {
+        grid.innerHTML = '';
+        GAMES.forEach(g => {
+            const block = document.createElement('div');
+            block.className = 'game-block';
+            block.dataset.name = g.name.toLowerCase();
+            block.onclick = () => launchByType(g.type, g.url);
+
+            const img = document.createElement('img');
+            img.src = g.img;
+            img.alt = g.name;
+            img.loading = 'lazy';
+
+            const p = document.createElement('p');
+            p.textContent = g.name;
+
+            block.append(img, p);
+            grid.appendChild(block);
+        });
+    }
+
+    function filterGames() {
+        const q = searchInput.value.trim().toLowerCase();
+        let shown = 0;
+        grid.querySelectorAll('.game-block').forEach(b => {
+            const match = b.dataset.name.includes(q);
+            b.style.display = match ? '' : 'none';
+            if (match) shown++;
+        });
+        noResults.style.display = shown ? 'none' : 'block';
+    }
+
+    function openGamesView() {
+        document.body.classList.add('games-open');
+        filterGames();
+    }
+    function closeGamesView() {
+        document.body.classList.remove('games-open');
+        searchInput.value = '';
+        filterGames();
+        searchInput.blur();
+    }
+
+    searchInput.addEventListener('input', () => {
+        if (!document.body.classList.contains('games-open')) openGamesView();
+        filterGames();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && document.body.classList.contains('games-open')
+            && !document.body.classList.contains('in-game')) closeGamesView();
+    });
+
+    // ========== DROPDOWN MENU ==========
+    const launcher = document.getElementById('launcher');
+    const menuEl = document.getElementById('menu');
+
+    function buildMenu(items, container) {
+        items.forEach(item => {
+            const el = document.createElement('div');
+            el.className = 'menu-item';
+            el.innerHTML = `<i class="mi-icon ${item.icon || 'fa-solid fa-circle'}"></i><span>${item.label}</span>`;
+
+            if (item.children) {
+                el.classList.add('has-sub');
+                el.insertAdjacentHTML('beforeend', '<i class="mi-arrow fa-solid fa-chevron-right"></i>');
+                const sub = document.createElement('div');
+                sub.className = 'submenu';
+                const inner = document.createElement('div');
+                inner.className = 'menu';
+                buildMenu(item.children, inner);
+                sub.appendChild(inner);
+                el.appendChild(sub);
+                // tap support for touch screens
+                el.addEventListener('click', (e) => {
+                    if (e.target.closest('.submenu')) return;
+                    el.classList.toggle('sub-open');
+                });
+            } else {
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (item.type === 'games') openGamesView();
+                    else launchByType(item.type, item.url);
+                    // close the menu until the mouse leaves and comes back
+                    launcher.classList.remove('open');
+                    launcher.classList.add('suppress');
+                });
+            }
+            container.appendChild(el);
+        });
+    }
+
+    launcher.addEventListener('mouseleave', () => launcher.classList.remove('suppress'));
+    document.getElementById('launcher-btn').addEventListener('click', () => {
+        launcher.classList.remove('suppress');
+        launcher.classList.toggle('open');   // tap-to-toggle for touch devices
+    });
+    document.addEventListener('click', (e) => {
+        if (!launcher.contains(e.target)) launcher.classList.remove('open');
+    });
+
+    renderGames();
+    buildMenu(MENU_ITEMS, menuEl);
+
+    // Leave confirmation
+    window.addEventListener('beforeunload', function (e) {
+        e.preventDefault();
+        e.returnValue = '';
+    });
+    window.onbeforeunload = function () {
+        return '';
+    };
+</script>
+
+<script>
+// =====================================================================
+//  TABSPACE ACCOUNTS, CLOUD SYNC & CUSTOMIZATION  (added)
+//  - Talks ONLY to Firebase Realtime Database (REST API, FIREBASE_CONFIG.databaseURL).
+//    No Firebase Authentication/Storage/Firestore/Functions/Hosting.
+//  - Never stores passwords or vault ids in localStorage.
+//  - Never deletes or rewrites existing game save keys except when the user
+//    explicitly restores/chooses a save (a backup is made first).
+// =====================================================================
+window.TS = (function () {
+    'use strict';
+    const CFG = window.TABSPACE_CONFIG || {};
+    const FB = CFG.FIREBASE_CONFIG || {};
+    const IMG = CFG.IMAGE_HOST || {};
+    const IMG_ENABLED = IMG.provider === 'cloudinary' && /^[a-z0-9_-]+$/i.test(IMG.cloudName || '') && /^[a-z0-9_-]+$/i.test(IMG.uploadPreset || '');
+    const LS_SYNC = 'tabspace:sync:v1';
+    const SS_GUEST = 'tabspace:guest-session';
+    const MAX_IMG_BYTES = 8 * 1024 * 1024;
+    const IMG_TYPES = { 'image/png': 'PNG', 'image/jpeg': 'JPEG', 'image/webp': 'WebP', 'image/gif': 'GIF' };
+    const MAX_GAME_BYTES = 3 * 1024 * 1024;
+    const PRESETS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6', '#8b5cf6', '#ec4899', '#a1a1aa'];
+    const $ = id => document.getElementById(id);
+
+    const state = {
+        mode: null,            // 'account' | 'guest' | null (auth screen)
+        user: null,            // { uid, username }
+        vault: null,           // account vault id (memory; optionally kept encrypted in IndexedDB)
+        cookieOk: true,
+        reconciled: false,     // cloud writes are enabled only after initial reconciliation
+        settingsStatus: 'idle',
+        games: {},             // gid -> { status, msg }
+        pendingConflicts: [],  // queued while a game is open
+        currentGame: null,     // { url, kind, origin }
+        settings: TSTheme.boot,
+        localImageUrl: null,   // object URL of IndexedDB image
+        expired: false,
+    };
+
+    // ------------------------------------------------------------------ utils
+    class ApiError extends Error { constructor(status, code, data) { super(code || ('http_' + status)); this.status = status; this.code = code; this.data = data; } }
+
+    // ------------------------------------------- Firebase Realtime Database
+    // The page talks to Realtime Database directly over its REST API (no
+    // Firebase SDK, no Firebase Authentication). Each account lives at
+    // vaults/<vaultId>, where vaultId = SHA-256 of a PBKDF2 (600,000 rounds)
+    // key derived in this browser from the username + password. The password
+    // itself never leaves the page, the database rules refuse to list vaults,
+    // and only someone who knows the username AND password can locate a vault.
+    const DB = (() => {
+        try {
+            const u = new URL(String(FB.databaseURL || '').trim());
+            const local = /^(localhost|127\.0\.0\.1)$/.test(u.hostname);
+            if (u.protocol !== 'https:' && !(u.protocol === 'http:' && local)) return null;
+            return { base: u.origin + u.pathname.replace(/\/+$/, ''), ns: u.searchParams.get('ns') };
+        } catch (e) { return null; }
+    })();
+    const API = !!DB && !!(window.crypto && crypto.subtle);
+    const SV_NOW = { '.sv': 'timestamp' };
+    const RTDB_KEY_RE = /^[^.$#\[\]\/\x00-\x1F\x7F]{1,768}$/;
+    const enc8 = new TextEncoder();
+    const hexOf = buf => Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2, '0')).join('');
+    async function sha256hex(str) { return hexOf(await crypto.subtle.digest('SHA-256', enc8.encode(str))); }
+
+    async function rest(method, path, body, opts = {}) {
+        const q = new URLSearchParams(opts.query || {});
+        if (DB.ns) q.set('ns', DB.ns);
+        const qs = q.toString();
+        const url = DB.base + '/' + path + '.json' + (qs ? '?' + qs : '');
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), opts.timeout || 25000);
+        let res;
+        try {
+            // No custom headers + text body = simple CORS request; no cookies are sent.
+            res = await fetch(url, { method, body: body === undefined ? undefined : JSON.stringify(body), signal: ctrl.signal, keepalive: !!opts.keepalive, credentials: 'omit', cache: 'no-store' });
+        } catch (e) { throw new ApiError(0, 'network'); }
+        finally { clearTimeout(t); }
+        let data = null; try { data = await res.json(); } catch (e) { /* empty */ }
+        if (res.status === 401 || res.status === 403) throw new ApiError(403, 'denied', data);
+        if (res.status === 404) throw new ApiError(0, 'bad_database_url', data);
+        if (!res.ok) throw new ApiError(res.status === 413 ? 413 : 503, res.status === 413 ? 'too_large' : 'server_unavailable', data);
+        return data;
+    }
+
+    async function deriveVault(lower, password) {
+        const base = await crypto.subtle.importKey('raw', enc8.encode(password), 'PBKDF2', false, ['deriveBits']);
+        const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: enc8.encode('tabspace-rtdb-v1|' + lower), iterations: 600000 }, base, 256);
+        return sha256hex('vault-id|' + hexOf(bits));
+    }
+    const uidFor = async vault => (await sha256hex('uid|' + vault)).slice(0, 32);
+
+    // "Keep me signed in": the vault id is stored only in IndexedDB, encrypted
+    // with a non-extractable AES-GCM key. Nothing secret goes in localStorage.
+    async function rememberVault(vault) {
+        const key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc8.encode(vault));
+        await idbRun('session', 'readwrite', s => s.put({ key, iv, ct }, 'current'));
+    }
+    async function recallVault() {
+        try {
+            const r = await idbRun('session', 'readonly', s => s.get('current'));
+            if (!r || !r.key) return null;
+            const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: r.iv }, r.key, r.ct);
+            const v = new TextDecoder().decode(pt);
+            return /^[0-9a-f]{64}$/.test(v) ? v : null;
+        } catch (e) { return null; }
+    }
+    async function forgetVault() { try { await idbRun('session', 'readwrite', s => s.delete('current')); } catch (e) { /* ignore */ } }
+
+    function cleanProgress(p) {
+        if (!p || typeof p !== 'object') return 'bad_body';
+        if (!Number.isInteger(p.baseRev) || p.baseRev < 0) return 'bad_rev';
+        if (typeof p.hash !== 'string' || !/^[0-9a-f]{16,64}$/.test(p.hash)) return 'bad_hash';
+        if (!p.keys || typeof p.keys !== 'object' || Array.isArray(p.keys)) return 'bad_keys';
+        const entries = Object.entries(p.keys);
+        if (!entries.length || entries.length > 50) return 'bad_keys';
+        let total = 0;
+        for (const [k, v] of entries) { if (!RTDB_KEY_RE.test(k) || typeof v !== 'string') return 'bad_keys'; total += k.length + v.length; }
+        if (total > MAX_GAME_BYTES) return 'too_large';
+        return { keys: p.keys, hash: p.hash, size: total, baseRev: p.baseRev, format: typeof p.format === 'string' ? p.format.slice(0, 32) : 'localStorage-v1' };
+    }
+    function cleanSettings(s) {
+        const out = {};
+        if (s && /^#[0-9a-f]{6}$/.test(s.themeColor || '')) out.themeColor = s.themeColor;
+        if (s && typeof s.interactiveBg === 'boolean') out.interactiveBg = s.interactiveBg;
+        if (s && 'bgImage' in s) {
+            const b = s.bgImage;
+            out.bgImage = b && typeof b.url === 'string' && b.url.startsWith('https://') && b.url.length <= 600
+                ? { url: b.url, provider: String(b.provider || 'remote').slice(0, 32), width: Math.round(+b.width || 0), height: Math.round(+b.height || 0), bytes: Math.round(+b.bytes || 0), updatedAt: SV_NOW }
+                : null;
+        }
+        return out;
+    }
+
+    async function authCall(isSignup, username, password, remember) {
+        const lower = username.toLowerCase();
+        const vault = await deriveVault(lower, password);
+        const root = 'vaults/' + vault;
+        let profile;
+        if (isSignup) {
+            profile = { username, usernameLower: lower, createdAt: SV_NOW };
+            try {
+                // One atomic multi-path write: claim the username and create the
+                // vault together. Rules reject it if the username already exists.
+                await rest('PATCH', '', { ['usernames/' + lower]: { vault, createdAt: SV_NOW }, [root + '/profile']: profile, [root + '/metadata']: { schemaVersion: 1, createdAt: SV_NOW } }, { timeout: 30000 });
+            } catch (e) { if (e.code === 'denied') throw new ApiError(409, 'username_taken'); throw e; }
+        } else {
+            try { profile = await rest('GET', root + '/profile', undefined, { timeout: 30000 }); }
+            catch (e) { if (e.code === 'denied') throw new ApiError(401, 'invalid_credentials'); throw e; }
+            if (!profile || profile.usernameLower !== lower) throw new ApiError(401, 'invalid_credentials');
+        }
+        state.vault = vault;
+        if (remember) { try { await rememberVault(vault); } catch (e) { state.cookieOk = false; } }
+        else await forgetVault();
+        return { user: { uid: await uidFor(vault), username: profile.username || username } };
+    }
+
+    // Same request shapes as before, now served straight from Realtime Database.
+    async function api(method, path, body, opts = {}) {
+        if (!API) throw new ApiError(0, 'not_configured');
+        if (path === '/api/signup' || path === '/api/login') return authCall(path === '/api/signup', body.username, body.password, body.remember);
+        if (path === '/api/logout') { state.vault = null; await forgetVault(); return { ok: true }; }
+        if (!state.vault && path === '/api/session') state.vault = await recallVault();
+        const vault = state.vault;
+        const noSession = () => { const e = new ApiError(401, 'no_session'); if (state.mode === 'account' && !opts.noExpire) onSessionExpired(); return e; };
+        if (!vault) throw noSession();
+        const root = 'vaults/' + vault;
+        const call = async (...a) => {
+            try { return await rest(...a); }
+            catch (e) { if (e.code === 'denied' && !(await rest('GET', root + '/profile').catch(() => null))) throw noSession(); throw e; }
+        };
+        if (path === '/api/session') {
+            let p = null;
+            try { p = await rest('GET', root + '/profile', undefined, { timeout: opts.timeout }); } catch (e) { if (e.code !== 'denied') throw e; }
+            if (!p || !p.username) { state.vault = null; await forgetVault(); throw new ApiError(401, 'no_session'); }
+            return { user: { uid: await uidFor(vault), username: p.username } };
+        }
+        if (path === '/api/data') {
+            const [profile, settings, gameProgress] = await Promise.all(['profile', 'settings', 'gameProgress'].map(k => call('GET', root + '/' + k, undefined, { timeout: opts.timeout })));
+            if (!profile) throw noSession();
+            return { profile, settings: settings || null, gameProgress: gameProgress || {} };
+        }
+        if (method === 'PUT' && path === '/api/settings') {
+            const patch = { ...cleanSettings(body.settings), schema: 1, updatedAt: SV_NOW };
+            await call('PATCH', root + '/settings', patch, { keepalive: opts.keepalive });   // PATCH keeps unknown fields
+            return { settings: await call('GET', root + '/settings') };
+        }
+        let m = path.match(/^\/api\/progress\/([a-z0-9-]{1,64})$/);
+        if (m && method === 'PUT') {
+            const p = cleanProgress(body);
+            if (typeof p === 'string') throw new ApiError(p === 'too_large' ? 413 : 400, p);
+            const gp = root + '/gameProgress/' + m[1];
+            const cur = await call('GET', gp);
+            const curRev = cur && Number.isInteger(cur.rev) ? cur.rev : 0;
+            if (curRev !== p.baseRev) throw new ApiError(409, 'conflict', { current: cur });
+            const rec = { ...(cur && typeof cur === 'object' ? cur : {}), schema: 1, format: p.format, rev: curRev + 1, hash: p.hash, size: p.size, keys: p.keys, updatedAt: SV_NOW };
+            try { await call('PUT', gp, rec, { keepalive: opts.keepalive, query: { print: 'silent' } }); }
+            catch (e) {
+                if (e.code !== 'denied') throw e;
+                // Rules require rev === previous + 1, so a concurrent write from another device lands here.
+                const now = await call('GET', gp);
+                if (now && now.rev !== curRev) throw new ApiError(409, 'conflict', { current: now });
+                throw new ApiError(400, 'rejected');
+            }
+            call('PATCH', root + '/metadata', { lastSyncAt: SV_NOW, schemaVersion: 1 }, { query: { print: 'silent' } }).catch(() => {});
+            return { rev: rec.rev, hash: p.hash };
+        }
+        m = path.match(/^\/api\/progress\/([a-z0-9-]{1,64})\/backup$/);
+        if (m && method === 'POST') {
+            const p = cleanProgress({ ...body, baseRev: 0 });
+            if (typeof p === 'string') throw new ApiError(p === 'too_large' ? 413 : 400, p);
+            const base = root + '/backups/' + m[1];
+            const id = Date.now().toString(36) + hexOf(crypto.getRandomValues(new Uint8Array(3)));
+            await call('PUT', base + '/' + id, { keys: p.keys, hash: p.hash, size: p.size, reason: String(body.reason || '').slice(0, 64), createdAt: SV_NOW }, { query: { print: 'silent' } });
+            const list = (await call('GET', base, undefined, { query: { shallow: 'true' } })) || {};
+            const ids = Object.keys(list).sort();
+            for (const old of ids.slice(0, Math.max(0, ids.length - 5))) await call('DELETE', base + '/' + old).catch(() => {});
+            return { id };
+        }
+        throw new ApiError(400, 'unknown_request');
+    }
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const withLock = (name, fn) => (navigator.locks && navigator.locks.request) ? navigator.locks.request(name, fn) : fn();
+    const encKey = k => encodeURIComponent(k).replace(/\./g, '%2E').replace(/\*/g, '%2A');
+    const decKey = k => { try { return decodeURIComponent(k); } catch (e) { return null; } };
+    function fnv(str, seed) { let h = seed >>> 0; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(16).padStart(8, '0'); }
+    async function hashMap(map) {
+        const s = JSON.stringify(Object.keys(map).sort().map(k => [k, map[k]]));
+        if (window.crypto && crypto.subtle) {
+            const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+            return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join('');
+        }
+        return fnv(s, 2166136261) + fnv(s, 33554467) + fnv(s, 16777619) + fnv(s, 99991);
+    }
+    const mapSize = m => Object.entries(m).reduce((n, [k, v]) => n + k.length + v.length, 0);
+    const fmtBytes = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
+    const fmtTime = t => t ? new Date(t).toLocaleString() : 'unknown';
+    function readJSON(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v && typeof v === 'object' ? v : d; } catch (e) { return d; } }
+    function writeJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+    function el(tag, attrs, ...kids) {
+        const n = document.createElement(tag);
+        for (const [k, v] of Object.entries(attrs || {})) {
+            if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v;
+            else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v);
+        }
+        kids.flat().forEach(c => c != null && n.append(c));
+        return n;
+    }
+    let toastTimer;
+    function toast(msg, isError) {
+        const t = $('ts-toast'); t.textContent = msg; t.classList.toggle('error', !!isError); t.classList.add('show');
+        clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), isError ? 6000 : 3500);
+    }
+
+    // ------------------------------------------------------------- IndexedDB
+    let idbP = null;
+    function idb() {
+        if (!idbP) idbP = new Promise((res, rej) => {
+            if (!window.indexedDB) return rej(new Error('IndexedDB unavailable'));
+            const r = indexedDB.open('tabspace', 2);
+            r.onupgradeneeded = () => {
+                const d = r.result;
+                if (!d.objectStoreNames.contains('files')) d.createObjectStore('files');
+                if (!d.objectStoreNames.contains('session')) d.createObjectStore('session');
+                if (!d.objectStoreNames.contains('backups')) d.createObjectStore('backups', { keyPath: 'id', autoIncrement: true }).createIndex('gameId', 'gameId');
+            };
+            r.onsuccess = () => res(r.result);
+            r.onerror = () => rej(r.error);
+        });
+        idbP.catch(() => { idbP = null; });
+        return idbP;
+    }
+    async function idbRun(store, mode, fn) {
+        const d = await idb();
+        return new Promise((res, rej) => {
+            const tx = d.transaction(store, mode); const st = tx.objectStore(store);
+            let out; const r = fn(st); if (r) r.onsuccess = () => { out = r.result; };
+            tx.oncomplete = () => res(out); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+        });
+    }
+    async function addBackup(gameId, keys, reason) {
+        await idbRun('backups', 'readwrite', s => s.add({ gameId, keys, size: mapSize(keys), reason, createdAt: Date.now() }));
+        const list = await listBackups(gameId);
+        for (const b of list.slice(5)) await idbRun('backups', 'readwrite', s => s.delete(b.id));
+    }
+    async function listBackups(gameId) {
+        const all = await idbRun('backups', 'readonly', s => s.index('gameId').getAll(gameId)) || [];
+        return all.sort((a, b) => b.createdAt - a.createdAt);
+    }
+
+    // ------------------------------------------------------- save adapters
+    // Only games whose saves genuinely live in THIS page's origin can be synced.
+    // "prox" games are loaded as blob: URLs created by this page, so they share
+    // this page's localStorage. Cross-origin games are isolated by the browser.
+    const ADAPTERS = [];
+    function lsAdapter(def) {
+        const a = {
+            ...def, kind: 'localStorage',
+            read() {
+                const m = {}; let hasRequired = false;
+                for (const k of a.keys) {
+                    let v = null; try { v = localStorage.getItem(k); } catch (e) { /* storage blocked */ }
+                    if (v !== null) { m[encKey(k)] = v; if (a.required.includes(k)) hasRequired = true; }
+                }
+                return hasRequired ? m : null;
+            },
+            write(map) {
+                // Only keys this adapter owns may be written — cloud data cannot touch other storage.
+                for (const [ek, v] of Object.entries(map)) {
+                    const k = decKey(ek);
+                    if (k && a.keys.includes(k) && typeof v === 'string') localStorage.setItem(k, v);
+                }
+            },
+            remove() { for (const k of a.required) localStorage.removeItem(k); }
+        };
+        ADAPTERS.push(a);
+        return a;
+    }
+    // Cookie Clicker (Prox): verified from its source — saves with
+    // localStorage "CookieClickerGame" (and "CookieClickerGameBeta" on beta builds).
+    lsAdapter({ id: 'cookie-clicker-prox', name: 'Cookie Clicker Prox', keys: ['CookieClickerGame', 'CookieClickerGameBeta', 'CookieClickerLang'], required: ['CookieClickerGame', 'CookieClickerGameBeta'], gameUrl: 'https://core-logic-utils.github.io/utils/bggms/ckyclkr' });
+    // Opt-in postMessage protocol (any game in GAMES may use it — see README).
+    const pmAdapters = {};
+    (typeof GAMES !== 'undefined' ? GAMES : []).forEach(g => {
+        const id = 'pm-' + fnv(g.url, 2166136261);
+        if (pmAdapters[g.url]) return;
+        pmAdapters[g.url] = lsAdapter({ id, name: g.name, keys: ['tabspace:pm:' + id], required: ['tabspace:pm:' + id], gameUrl: g.url, pm: true });
+    });
+    const adapterById = id => ADAPTERS.find(a => a.id === id);
+    const keyToAdapter = {};
+    ADAPTERS.forEach(a => a.keys.forEach(k => { keyToAdapter[k] = a; }));
+
+    // ---- sync bookkeeping (no secrets): tabspace:sync:v1
+    function syncState() {
+        const s = readJSON(LS_SYNC, {});
+        s.v = 1; s.local = s.local || {}; s.acct = s.acct || {}; s.later = s.later || {};
+        return s;
+    }
+    function acctGame(uid, gid) { const s = syncState(); return (s.acct[uid] || {})[gid] || null; }
+    function markSynced(uid, gid, rev, hash) {
+        const s = syncState();
+        s.acct[uid] = s.acct[uid] || {};
+        s.acct[uid][gid] = { rev, hash, at: Date.now() };
+        s.local[gid] = { owner: uid };
+        if (s.later[uid]) delete s.later[uid][gid];
+        writeJSON(LS_SYNC, s);
+    }
+    function setLater(uid, gid, on) {
+        const s = syncState(); s.later[uid] = s.later[uid] || {};
+        if (on) s.later[uid][gid] = true; else delete s.later[uid][gid];
+        writeJSON(LS_SYNC, s);
+    }
+    const isLater = (uid, gid) => !!((syncState().later[uid] || {})[gid]);
+
+    // ------------------------------------------------------ status display
+    function setGameStatus(gid, status, msg) { state.games[gid] = { status, msg: msg || '' }; renderStatus(); }
+    function overall() {
+        if (state.mode === 'guest') return ['local', 'Saved on this device (guest)'];
+        if (state.mode !== 'account') return ['waiting', ''];
+        if (state.expired) return ['failed', 'Session expired — sign in to sync'];
+        if (!state.reconciled) return ['waiting', 'Waiting to synchronize'];
+        const all = [state.settingsStatus, ...Object.values(state.games).map(g => g.status)];
+        if (all.includes('failed')) return ['failed', 'Save failed'];
+        if (all.includes('conflict')) return ['conflict', 'A save needs your choice'];
+        if (all.includes('saving')) return ['saving', 'Saving…'];
+        if (all.includes('waiting')) return ['waiting', 'Waiting to synchronize'];
+        return ['saved', 'Saved'];
+    }
+    function renderStatus() {
+        const [cls, text] = overall();
+        const pill = $('ts-sync-pill');
+        pill.classList.toggle('show', !!state.mode);
+        pill.querySelector('.ts-dot').className = 'ts-dot ' + cls;
+        pill.querySelector('span:last-child').textContent = text;
+        if (!$('ts-panel').hidden) renderAccountSection();
+    }
+
+    // ================================================================ THEME
+    const colorInput = () => $('ts-color'), hexInput = () => $('ts-hex');
+    function setThemeColor(hex, { fromHex } = {}) {
+        const n = TSTheme.normHex(hex);
+        if (!n) return false;
+        TSTheme.apply(n);
+        if (typeof window.setParticleColors === 'function') window.setParticleColors(TSTheme.cssVar('--accent-rgb') || '239, 68, 68', TSTheme.cssVar('--bg-rgb') || '11, 5, 6');
+        colorInput().value = n;
+        if (!fromHex) hexInput().value = n;
+        hexInput().setAttribute('aria-invalid', 'false'); $('ts-hex-error').textContent = '';
+        document.querySelectorAll('.ts-swatch').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.color === n)));
+        if (state.settings.themeColor !== n) { state.settings.themeColor = n; settingsChanged(); }
+        return true;
+    }
+
+    // =========================================================== BACKGROUND
+    function applyBackground() {
+        const s = state.settings, layer = $('bg-image');
+        let url = null;
+        if (s.bgImage && s.bgImage.source === 'local' && state.localImageUrl) url = state.localImageUrl;
+        else if (s.bgImage && s.bgImage.source === 'remote' && /^https:\/\//.test(s.bgImage.url || '')) url = s.bgImage.url;
+        if (url) {
+            layer.style.backgroundImage = 'url("' + url.replace(/["\\\n\r]/g, encodeURIComponent) + '")';
+            document.body.classList.add('has-bg-image');
+        } else {
+            layer.style.backgroundImage = '';
+            document.body.classList.remove('has-bg-image');
+        }
+        renderBgPreview(url);
+    }
+    function setInteractive(on, { silent } = {}) {
+        if (typeof window.setInteractiveBackground === 'function') window.setInteractiveBackground(on);
+        $('ts-bg-toggle').checked = on;
+        if (!silent && state.settings.interactiveBg !== on) { state.settings.interactiveBg = on; settingsChanged(); }
+    }
+    async function loadLocalImage() {
+        if (state.localImageUrl) { URL.revokeObjectURL(state.localImageUrl); state.localImageUrl = null; }
+        try {
+            const rec = await idbRun('files', 'readonly', s => s.get('bgImage'));
+            if (rec && rec.blob) state.localImageUrl = URL.createObjectURL(rec.blob);
+            return rec || null;
+        } catch (e) { return null; }
+    }
+    function decodeImage(file) {
+        return new Promise((res, rej) => {
+            const u = URL.createObjectURL(file), img = new Image();
+            img.onload = () => { URL.revokeObjectURL(u); res({ width: img.naturalWidth, height: img.naturalHeight }); };
+            img.onerror = () => { URL.revokeObjectURL(u); rej(new Error('decode')); };
+            img.src = u;
+        });
+    }
+    async function handleImageFile(file) {
+        const err = $('ts-bg-error'); err.textContent = '';
+        if (!file) return;
+        if (!IMG_TYPES[file.type]) { err.textContent = 'Unsupported file type. Please choose a PNG, JPEG, WebP, or GIF image.'; return; }
+        if (file.size > MAX_IMG_BYTES) { err.textContent = 'That image is ' + fmtBytes(file.size) + '. The maximum size is 8 MB.'; return; }
+        let dims;
+        try { dims = await decodeImage(file); } catch (e) { err.textContent = 'This file could not be read as an image.'; return; }
+        if (!dims.width || !dims.height || dims.width > 12000 || dims.height > 12000) { err.textContent = 'Image dimensions are not supported (max 12000 × 12000).'; return; }
+        const meta = { name: String(file.name || 'image').slice(0, 80), type: file.type, size: file.size, width: dims.width, height: dims.height, updatedAt: Date.now() };
+        try {
+            await idbRun('files', 'readwrite', s => s.put({ blob: file, ...meta }, 'bgImage'));
+        } catch (e) { err.textContent = 'Could not store the image on this device (storage may be full or blocked).'; return; }
+        await loadLocalImage();
+        state.settings.bgImage = { source: 'local', ...meta };
+        applyBackground();
+        settingsChanged();
+        if (state.mode === 'account' && IMG_ENABLED) uploadRemoteImage(file, meta);
+    }
+    async function uploadRemoteImage(file, meta) {
+        const status = $('ts-bg-status');
+        status.textContent = 'Uploading to image host…';
+        try {
+            const fd = new FormData(); fd.append('file', file); fd.append('upload_preset', IMG.uploadPreset);
+            const res = await fetch('https://api.cloudinary.com/v1_1/' + encodeURIComponent(IMG.cloudName) + '/image/upload', { method: 'POST', body: fd });
+            const j = await res.json().catch(() => null);
+            if (!res.ok || !j || typeof j.secure_url !== 'string') throw new Error((j && j.error && j.error.message) || ('HTTP ' + res.status));
+            const u = new URL(j.secure_url);
+            if (u.protocol !== 'https:' || u.hostname !== 'res.cloudinary.com') throw new Error('unexpected image URL');
+            if (!state.settings.bgImage || state.settings.bgImage.updatedAt !== meta.updatedAt) return; // replaced meanwhile
+            state.settings.bgImage = { source: 'remote', url: u.toString(), provider: 'cloudinary', width: j.width || meta.width, height: j.height || meta.height, bytes: j.bytes || meta.size, name: meta.name, updatedAt: meta.updatedAt };
+            settingsChanged();
+            renderBgPreview();
+        } catch (e) {
+            if (state.settings.bgImage && state.settings.bgImage.updatedAt === meta.updatedAt) {
+                status.textContent = 'Upload failed — image saved on this device only.';
+                $('ts-bg-error').textContent = 'Image upload failed (' + e.message + '). ';
+                $('ts-bg-error').append(el('button', { class: 'ts-link', type: 'button', text: 'Retry upload', onclick: () => uploadRemoteImage(file, meta) }));
+            }
+        }
+    }
+    async function removeImage() {
+        try { await idbRun('files', 'readwrite', s => s.delete('bgImage')); } catch (e) { /* nothing stored */ }
+        if (state.localImageUrl) { URL.revokeObjectURL(state.localImageUrl); state.localImageUrl = null; }
+        state.settings.bgImage = null; $('ts-bg-error').textContent = '';
+        applyBackground(); settingsChanged();
+    }
+    function renderBgPreview(url) {
+        const s = state.settings.bgImage, box = $('ts-bg-preview');
+        if (url === undefined) url = s && s.source === 'local' ? state.localImageUrl : s && s.url;
+        if (!s || !url) { box.hidden = true; $('ts-bg-status').textContent = ''; return; }
+        box.hidden = false;
+        $('ts-bg-thumb').src = url;
+        $('ts-bg-name').textContent = s.name || 'Background image';
+        $('ts-bg-dims').textContent = (s.width && s.height ? s.width + ' × ' + s.height + ' · ' : '') + fmtBytes(s.size || s.bytes || 0);
+        $('ts-bg-status').textContent = s.source === 'remote'
+            ? (state.mode === 'account' ? 'Hosted image — synced with your account' : 'Hosted image')
+            : (state.mode === 'account' && IMG_ENABLED ? 'Stored on this device only (not yet uploaded)' : 'Stored on this device only — not synced to other devices or sites');
+    }
+
+    // ============================================================ SETTINGS
+    let settingsTimer = null, settingsInFlight = null, localSaveTimer = null;
+    function settingsChanged() {
+        state.settings.updatedAt = Date.now();
+        state.settings.owner = state.mode === 'account' ? state.user.uid : null;
+        // Save locally right away (small JSON) so nothing is lost if the tab closes immediately.
+        if (!TSTheme.save(state.settings)) toast('Could not save settings on this device (storage blocked or full).', true);
+        if (state.mode === 'account' && state.reconciled) {
+            state.settingsStatus = 'waiting'; renderStatus();
+            clearTimeout(settingsTimer);
+            settingsTimer = setTimeout(pushSettings, 1200);
+        }
+    }
+    function cloudSettingsPayload() {
+        const s = state.settings;
+        return { themeColor: s.themeColor, interactiveBg: s.interactiveBg,
+            bgImage: s.bgImage && s.bgImage.source === 'remote' ? { url: s.bgImage.url, provider: s.bgImage.provider || 'remote', width: s.bgImage.width || 0, height: s.bgImage.height || 0, bytes: s.bgImage.bytes || 0 } : null };
+    }
+    async function pushSettings() {
+        clearTimeout(settingsTimer); settingsTimer = null;
+        if (state.mode !== 'account' || !state.reconciled) return true;
+        if (settingsInFlight) { await settingsInFlight.catch(() => {}); }
+        const stamp = state.settings.updatedAt;
+        state.settingsStatus = 'saving'; renderStatus();
+        settingsInFlight = api('PUT', '/api/settings', { settings: cloudSettingsPayload() });
+        try {
+            await settingsInFlight;
+            if (state.settings.updatedAt === stamp) { state.settings.syncedAt = Date.now(); TSTheme.save(state.settings); state.settingsStatus = 'saved'; }
+            renderStatus(); return true;
+        } catch (e) {
+            state.settingsStatus = e.status === 0 ? 'waiting' : 'failed'; renderStatus();
+            if (e.status === 0) scheduleRetry();
+            return false;
+        } finally { settingsInFlight = null; }
+    }
+    function applyAllSettings() {
+        setThemeColor(state.settings.themeColor);
+        setInteractive(state.settings.interactiveBg, { silent: true });
+        applyBackground();
+    }
+    async function reconcileSettings(cloud) {
+        const uid = state.user.uid, local = state.settings;
+        const localUnsynced = local.owner === uid && local.updatedAt > (local.syncedAt || 0);
+        if (!cloud || localUnsynced) {
+            // No cloud settings yet (import this device's customization) or newer offline edits by this account.
+            state.settings.owner = uid;
+            state.reconciled = true;
+            await pushSettings();
+            return;
+        }
+        const next = { ...local, themeColor: TSTheme.normHex(cloud.themeColor) || TSTheme.DEFAULT,
+            interactiveBg: typeof cloud.interactiveBg === 'boolean' ? cloud.interactiveBg : true,
+            owner: uid, syncedAt: Date.now(), updatedAt: +cloud.updatedAt || Date.now() };
+        if (cloud.bgImage && typeof cloud.bgImage.url === 'string') next.bgImage = { source: 'remote', ...cloud.bgImage };
+        else if (local.bgImage && local.bgImage.source === 'local') next.bgImage = local.bgImage;   // keep this device's local image
+        else next.bgImage = null;
+        state.settings = next;
+        TSTheme.save(next);
+        applyAllSettings();
+        state.settingsStatus = 'saved';
+    }
+
+    // ========================================================= GAME SYNC
+    async function readLocalGame(a) {
+        const keys = a.read();
+        if (!keys) return null;
+        const size = mapSize(keys);
+        return { keys, size, hash: await hashMap(keys) };
+    }
+    function validCloudRecord(a, rec) {
+        if (!rec || typeof rec !== 'object' || !rec.keys || typeof rec.keys !== 'object') return false;
+        if (rec.format && rec.format !== 'localStorage-v1') return false;              // unknown future format: leave untouched
+        const ks = Object.keys(rec.keys);
+        return ks.length > 0 && ks.every(k => a.keys.includes(decKey(k)) && typeof rec.keys[k] === 'string')
+            && ks.some(k => a.required.includes(decKey(k)));
+    }
+    async function writeLocalGame(a, keys, reasonForBackup) {
+        const cur = a.read();
+        if (cur) await addBackup(a.id, cur, reasonForBackup);   // throws if the backup can't be made
+        a.write(keys);
+    }
+    async function reconcileGames(cloudAll) {
+        const uid = state.user.uid, conflicts = [];
+        for (const a of ADAPTERS) {
+            const cloudRaw = cloudAll && cloudAll[a.id];
+            const local = await readLocalGame(a);
+            if (!local && !cloudRaw) continue;
+            if (cloudRaw && !validCloudRecord(a, cloudRaw)) { setGameStatus(a.id, 'failed', 'Cloud save uses an unsupported format; left untouched.'); continue; }
+            const cloud = cloudRaw ? { ...cloudRaw, hash: await hashMap(cloudRaw.keys) } : null;
+            const st = acctGame(uid, a.id);
+            const owner = (syncState().local[a.id] || {}).owner || null;
+            try {
+                if (local && local.size > MAX_GAME_BYTES) { setGameStatus(a.id, 'failed', 'Save is too large to sync (' + fmtBytes(local.size) + '). Kept on this device.'); continue; }
+                if (local && cloud && local.hash === cloud.hash) { markSynced(uid, a.id, cloud.rev, cloud.hash); setGameStatus(a.id, 'saved'); continue; }
+                if (!local && cloud) {   // empty device: restore account save
+                    a.write(cloud.keys); markSynced(uid, a.id, cloud.rev, cloud.hash); setGameStatus(a.id, 'saved', 'Restored from your account'); continue;
+                }
+                if (local && !cloud) {   // account has nothing: import this device's (guest) save
+                    if (owner && owner !== uid) { conflicts.push({ a, local, cloud: null, why: 'other-account' }); continue; }
+                    if (st) { const s = syncState(); delete (s.acct[uid] || {})[a.id]; writeJSON(LS_SYNC, s); }  // cloud copy is gone; start at rev 0
+                    await pushGame(a.id, { initial: true }); continue;
+                }
+                // both exist and differ
+                if (st && st.hash === local.hash && cloud.rev > st.rev && owner === uid) {
+                    await writeLocalGame(a, cloud.keys, 'replaced-by-newer-cloud');
+                    markSynced(uid, a.id, cloud.rev, cloud.hash); setGameStatus(a.id, 'saved', 'Updated from your account'); continue;
+                }
+                if (st && st.rev === cloud.rev && owner === uid) { await pushGame(a.id, { initial: true }); continue; }
+                if (isLater(uid, a.id)) { setGameStatus(a.id, 'conflict', 'Device and account saves differ — choose which to keep.'); continue; }
+                conflicts.push({ a, local, cloud, why: st ? 'both-changed' : 'first-link' });
+            } catch (e) {
+                setGameStatus(a.id, 'failed', 'Could not reconcile: ' + (e.message || e));
+            }
+        }
+        return conflicts;
+    }
+
+    const pushTimers = {};
+    let retryTimer = null, retryDelay = 15000;
+    function schedulePush(gid, delay = 4000) {
+        if (state.mode !== 'account' || !state.reconciled || state.expired) return;
+        if (isLater(state.user.uid, gid)) return;
+        clearTimeout(pushTimers[gid]);
+        if (!state.games[gid] || state.games[gid].status !== 'saving') setGameStatus(gid, 'waiting');
+        pushTimers[gid] = setTimeout(() => { delete pushTimers[gid]; pushGame(gid); }, delay);
+    }
+    function scheduleRetry() {
+        if (retryTimer) return;
+        retryTimer = setTimeout(() => { retryTimer = null; flushAll(); }, retryDelay);
+        retryDelay = Math.min(retryDelay * 2, 300000);
+    }
+    async function pushGame(gid, { initial, keepalive } = {}) {
+        if (state.mode !== 'account' || (!state.reconciled && !initial) || state.expired) return 'skipped';
+        const a = adapterById(gid); if (!a) return 'skipped';
+        const uid = state.user.uid;
+        if (isLater(uid, gid)) return 'skipped';
+        return withLock('tabspace-sync-' + gid, async () => {
+            const local = await readLocalGame(a);
+            if (!local) return 'empty';   // never propagate a missing local save as a deletion
+            if (local.size > MAX_GAME_BYTES) { setGameStatus(gid, 'failed', 'Save is too large to sync (' + fmtBytes(local.size) + '). Kept on this device.'); return 'too_large'; }
+            const st = acctGame(uid, gid);
+            if (st && st.hash === local.hash) { setGameStatus(gid, 'saved'); return 'unchanged'; }
+            setGameStatus(gid, 'saving');
+            try {
+                const r = await api('PUT', '/api/progress/' + gid, { baseRev: st ? st.rev : 0, hash: local.hash, keys: local.keys, format: 'localStorage-v1' }, { keepalive: keepalive && local.size < 60000 });
+                markSynced(uid, gid, r.rev, local.hash);
+                setGameStatus(gid, 'saved'); retryDelay = 15000;
+                return 'saved';
+            } catch (e) {
+                if (e.status === 409 && e.data && e.data.current) {
+                    const cur = e.data.current;
+                    if (validCloudRecord(a, cur)) {
+                        const ch = await hashMap(cur.keys);
+                        if (ch === local.hash) { markSynced(uid, gid, cur.rev, ch); setGameStatus(gid, 'saved'); return 'saved'; }
+                        queueConflict({ a, local, cloud: { ...cur, hash: ch }, why: 'both-changed' });
+                    } else setGameStatus(gid, 'failed', 'Cloud save changed to an unsupported format.');
+                    return 'conflict';
+                }
+                if (e.status === 413) { setGameStatus(gid, 'failed', 'Save is too large to sync. Kept on this device.'); return 'too_large'; }
+                if (e.status === 401) { setGameStatus(gid, 'failed', 'Session expired.'); return 'expired'; }
+                setGameStatus(gid, e.status === 0 || e.status >= 500 || e.status === 429 ? 'waiting' : 'failed', e.status === 0 ? 'Offline — will retry' : 'Server error ' + e.status);
+                scheduleRetry();
+                return 'failed';
+            }
+        });
+    }
+    async function scanGames() {
+        if (state.mode !== 'account' || !state.reconciled) return;
+        const uid = state.user.uid;
+        for (const a of ADAPTERS) {
+            if (isLater(uid, a.id) || pushTimers[a.id]) continue;
+            const local = a.read(); if (!local) continue;
+            const st = acctGame(uid, a.id);
+            const h = await hashMap(local);
+            if (!st || st.hash !== h) schedulePush(a.id, 1500);
+        }
+    }
+    async function flushAll({ keepalive } = {}) {
+        const results = [];
+        if (state.mode !== 'account' || !state.reconciled) return { ok: true, results };
+        if (settingsTimer || state.settingsStatus === 'waiting' || state.settingsStatus === 'failed') results.push(await pushSettings());
+        else if (settingsInFlight) results.push(await settingsInFlight.then(() => true, () => false));
+        for (const gid of Object.keys(pushTimers)) clearTimeout(pushTimers[gid]), delete pushTimers[gid];
+        for (const a of ADAPTERS) {
+            if (!a.read()) continue;
+            const r = await pushGame(a.id, { keepalive });
+            results.push(r === 'saved' || r === 'unchanged' || r === 'empty' || r === 'skipped');
+        }
+        return { ok: results.every(Boolean), results };
+    }
+
+    // -------------------------------------------------- conflict resolution
+    function queueConflict(c) {
+        setGameStatus(c.a.id, 'conflict', 'Device and account saves differ — choose which to keep.');
+        if (!state.pendingConflicts.some(x => x.a.id === c.a.id)) state.pendingConflicts.push(c);
+        if (!state.currentGame) processConflicts();
+    }
+    let processing = false;
+    async function processConflicts() {
+        if (processing) return; processing = true;
+        try { while (state.pendingConflicts.length && !state.currentGame) await resolveConflict(state.pendingConflicts.shift()); }
+        finally { processing = false; }
+    }
+    async function resolveConflict({ a, local, cloud, why }) {
+        const uid = state.user.uid;
+        const body = [];
+        if (why === 'other-account') body.push('This device has a ' + a.name + ' save that was last synced with a different account. Your account has no save for this game yet.');
+        else body.push('This device and your account have different ' + a.name + ' saves. Tabspace can’t safely merge complete game saves, so please choose which one to use. The other one is kept as a backup.');
+        body.push('This device: ' + fmtBytes(local.size) + '.');
+        if (cloud) body.push('Your account: ' + fmtBytes(mapSize(cloud.keys)) + ', last saved ' + fmtTime(cloud.updatedAt) + '.');
+        const buttons = [
+            { label: 'Decide later', value: 'later' },
+            { label: cloud ? 'Use account save' : 'Start fresh here', value: 'cloud' },
+            { label: 'Use this device’s save', value: 'local', primary: true },
+        ];
+        const choice = await dialog({ title: 'Choose a save for ' + a.name, paragraphs: body, buttons, cancelValue: 'later' });
+        try {
+            if (choice === 'later') { setLater(uid, a.id, true); setGameStatus(a.id, 'conflict', 'Device and account saves differ — choose which to keep.'); return; }
+            setLater(uid, a.id, false);
+            if (choice === 'cloud') {
+                if (cloud) { await writeLocalGame(a, cloud.keys, 'conflict-kept-account'); markSynced(uid, a.id, cloud.rev, cloud.hash); }
+                else { await addBackup(a.id, local.keys, 'conflict-start-fresh'); a.remove(); const s = syncState(); s.local[a.id] = { owner: uid }; writeJSON(LS_SYNC, s); }
+                setGameStatus(a.id, 'saved', cloud ? 'Using your account save (device save backed up)' : 'Device save backed up');
+                toast(a.name + ': the previous device save was backed up on this device.');
+            } else {
+                if (cloud) await api('POST', '/api/progress/' + a.id + '/backup', { keys: cloud.keys, hash: cloud.hash, reason: 'conflict-kept-device' });
+                const s = syncState(); s.acct[uid] = s.acct[uid] || {};
+                s.acct[uid][a.id] = { rev: cloud ? cloud.rev : 0, hash: cloud ? cloud.hash : '', at: Date.now() };
+                s.local[a.id] = { owner: uid }; writeJSON(LS_SYNC, s);
+                const r = await pushGame(a.id, { initial: true });
+                if (r !== 'saved') throw new Error('upload ' + r);
+            }
+        } catch (e) {
+            setLater(uid, a.id, true);
+            setGameStatus(a.id, 'failed', 'Could not apply your choice (' + (e.message || e) + '). Nothing was deleted.');
+            toast('Could not apply your choice for ' + a.name + '. Both saves are unchanged.', true);
+        }
+    }
+
+    // ---------------------------------------------- game hooks (from page)
+    function gameOpened(url, kind) {
+        let origin = null;
+        try { origin = kind === 'prox' ? location.origin : new URL(url).origin; } catch (e) { /* ignore */ }
+        state.currentGame = { url, kind, origin };
+    }
+    function gameClosed() {
+        state.currentGame = null;
+        scanGames();
+        processConflicts();
+    }
+    // Same-origin (prox / blob) game documents fire "storage" events in this page.
+    window.addEventListener('storage', e => {
+        if (e.storageArea !== localStorage || !e.key) return;
+        if (e.key === TSTheme.LS_KEY) {          // another tab changed customization
+            state.settings = TSTheme.load(); applyAllSettings(); return;
+        }
+        const a = keyToAdapter[e.key];
+        if (a) schedulePush(a.id);
+    });
+    // Opt-in postMessage save protocol for embedded games.
+    window.addEventListener('message', e => {
+        const frame = $('game-frame'), g = state.currentGame;
+        if (!g || !frame || e.source !== frame.contentWindow || !g.origin || g.origin === 'null' || e.origin !== g.origin) return;
+        const m = e.data;
+        if (!m || typeof m !== 'object' || m.v !== 1 || typeof m.type !== 'string') return;
+        const a = pmAdapters[g.url]; if (!a) return;
+        const key = a.keys[0];
+        if (m.type === 'tabspace:save') {
+            if (typeof m.data !== 'string' || m.data.length > 1000000) return;
+            try { localStorage.setItem(key, m.data); } catch (err) { return; }
+            schedulePush(a.id);
+        } else if (m.type === 'tabspace:load') {
+            let data = null; try { data = localStorage.getItem(key); } catch (err) { /* ignore */ }
+            e.source.postMessage({ type: 'tabspace:save-data', v: 1, data }, e.origin);
+        }
+    });
+    window.addEventListener('online', () => { retryDelay = 15000; flushAll(); });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushAll({ keepalive: true }); });
+    setInterval(() => { if (state.mode === 'account' && state.reconciled) scanGames(); }, 60000);
+
+    // ================================================================ DIALOG
+    let dialogResolve = null, dialogCancel = null, dialogReturnFocus = null;
+    function dialog({ title, paragraphs, buttons, cancelValue }) {
+        return new Promise(resolve => {
+            dialogResolve = resolve; dialogCancel = cancelValue; dialogReturnFocus = document.activeElement;
+            $('ts-dialog-title').textContent = title;
+            const body = $('ts-dialog-body'); body.replaceChildren(...paragraphs.map(p => el('p', { text: p })));
+            const acts = $('ts-dialog-actions'); acts.replaceChildren();
+            buttons.forEach(b => acts.append(el('button', { type: 'button', class: 'ts-btn ' + (b.primary ? 'ts-btn-primary' : b.danger ? 'ts-btn-danger' : ''), text: b.label, onclick: () => closeDialog(b.value) })));
+            $('ts-dialog').hidden = false;
+            (acts.querySelector('.ts-btn-primary') || acts.lastChild).focus();
+        });
+    }
+    function closeDialog(v) {
+        $('ts-dialog').hidden = true;
+        const r = dialogResolve; dialogResolve = null;
+        if (dialogReturnFocus && dialogReturnFocus.focus) dialogReturnFocus.focus();
+        if (r) r(v);
+    }
+
+    // ============================================================ AUTH UI
+    const MAIN_IDS = ['home', 'games-view', 'launcher', 'search-wrap', 'home-btn', 'ts-custom-btn', 'game-container', 'ts-panel'];
+    function setInert(on) { MAIN_IDS.forEach(id => { const n = $(id); if (n) n.inert = on; }); }
+    let authMode = 'signin';
+    function showAuth(view, opts = {}) {
+        closePanel();
+        const ov = $('ts-auth'); ov.hidden = false; setInert(true);
+        $('ts-auth-checking').hidden = view !== 'checking';
+        $('ts-auth-forms').hidden = view === 'checking';
+        if (view === 'checking') $('ts-auth-checking-text').textContent = opts.text || 'Checking your session…';
+        const notice = $('ts-auth-notice');
+        notice.hidden = !opts.notice; notice.replaceChildren();
+        if (opts.notice) { notice.append(opts.notice); if (opts.retry) notice.append(' ', el('button', { class: 'ts-link', type: 'button', text: 'Retry', onclick: opts.retry })); }
+        const disabled = !API;
+        ['ts-username', 'ts-password', 'ts-confirm', 'ts-remember', 'ts-auth-submit', 'ts-switch-btn', 'ts-tab-signin', 'ts-tab-signup'].forEach(id => { $(id).disabled = disabled; });
+        if (view !== 'checking') setTimeout(() => (disabled ? $('ts-guest-btn') : $('ts-username')).focus(), 30);
+    }
+    function hideAuth() { $('ts-auth').hidden = true; setInert(false); $('ts-password').value = ''; $('ts-confirm').value = ''; }
+    function setAuthMode(m) {
+        authMode = m;
+        const up = m === 'signup';
+        $('ts-tab-signin').setAttribute('aria-selected', String(!up)); $('ts-tab-signup').setAttribute('aria-selected', String(up));
+        $('ts-confirm-wrap').hidden = !up;
+        $('ts-password').autocomplete = up ? 'new-password' : 'current-password';
+        $('ts-auth-submit').querySelector('.lbl').textContent = up ? 'Create Account' : 'Sign In';
+        $('ts-switch-text').textContent = up ? 'Already have an account?' : 'New here?';
+        $('ts-switch-btn').textContent = up ? 'Sign in' : 'Create an account';
+        $('ts-user-hint').hidden = !up; $('ts-pass-hint').hidden = !up;
+        $('ts-auth-error').textContent = '';
+        ['ts-username', 'ts-password', 'ts-confirm'].forEach(id => $(id).setAttribute('aria-invalid', 'false'));
+    }
+    function authError(msg, fieldId) {
+        $('ts-auth-error').textContent = msg;
+        if (fieldId) { $(fieldId).setAttribute('aria-invalid', 'true'); $(fieldId).focus(); }
+    }
+    const ERR = {
+        bad_username: 'Usernames must be 3–20 characters: letters, numbers, or underscores.',
+        bad_password: 'Passwords must be 8–128 characters.',
+        username_taken: 'That username is already taken.',
+        invalid_credentials: 'Incorrect username or password.',
+        rate_limited: 'Too many attempts. Please wait a few minutes and try again.',
+        server_unavailable: 'The database is unavailable right now. Please try again shortly.',
+        bad_database_url: 'The Firebase databaseURL in this page looks wrong (database not found).',
+        network: 'Can’t reach the account database. Check your connection and try again.',
+    };
+    async function submitAuth(ev) {
+        ev.preventDefault();
+        if (!API) return;
+        const u = $('ts-username').value.trim(), p = $('ts-password').value, c = $('ts-confirm').value;
+        ['ts-username', 'ts-password', 'ts-confirm'].forEach(id => $(id).setAttribute('aria-invalid', 'false'));
+        if (!/^[A-Za-z0-9_]{3,20}$/.test(u)) return authError(ERR.bad_username, 'ts-username');
+        if (authMode === 'signup') {
+            if (p.length < 8 || p.length > 128) return authError(ERR.bad_password, 'ts-password');
+            if (p !== c) return authError('Passwords don’t match.', 'ts-confirm');
+        } else if (!p) return authError('Enter your password.', 'ts-password');
+        const btn = $('ts-auth-submit'); btn.disabled = true; btn.querySelector('.ts-spinner').hidden = false; $('ts-auth-error').textContent = '';
+        const slow = setTimeout(() => { $('ts-auth-error').textContent = 'Still working… securing your password takes a moment on slower devices.'; }, 5000);
+        try {
+            state.cookieOk = true;
+            const r = await api('POST', authMode === 'signup' ? '/api/signup' : '/api/login', { username: u, password: p, remember: $('ts-remember').checked }, { noExpire: true });
+            $('ts-password').value = ''; $('ts-confirm').value = '';
+            clearTimeout(slow);
+            await enterAccount(r.user);
+        } catch (e) {
+            clearTimeout(slow);
+            authError(ERR[e.code] || (e.status ? 'Something went wrong (' + e.status + '). Please try again.' : ERR.network));
+        } finally { btn.disabled = false; btn.querySelector('.ts-spinner').hidden = true; }
+    }
+
+    async function enterAccount(user) {
+        state.mode = 'account'; state.user = { uid: String(user.uid), username: String(user.username || '') };
+        state.reconciled = false; state.expired = false; state.games = {}; state.settingsStatus = 'idle';
+        try { sessionStorage.removeItem(SS_GUEST); } catch (e) { /* ignore */ }
+        showAuth('checking', { text: 'Loading your data…' });
+        renderSignout();
+        try {
+            const data = await api('GET', '/api/data', undefined, { timeout: 60000 });
+            await reconcileSettings(data.settings);
+            const conflicts = await reconcileGames(data.gameProgress || {});
+            state.reconciled = true;
+            hideAuth();
+            for (const c of conflicts) await resolveConflict(c);
+            if (!state.cookieOk) toast('This browser blocked local storage, so you’ll need to sign in again after reloading.', true);
+            renderStatus();
+        } catch (e) {
+            if (state.mode !== 'account') return;
+            if (e.status === 401) {                  // session no longer valid: back to sign-in, nothing local changed
+                state.mode = null; state.user = null; state.vault = null; state.expired = false;
+                renderSignout(); setAuthMode('signin');
+                return showAuth('forms', { notice: 'Your session has expired. Please sign in again.' });
+            }
+            hideAuth();
+            state.reconciled = false; renderStatus();
+            toast('Signed in, but your cloud data couldn’t be loaded. Nothing on this device was changed. Open Customize → Sync now to retry.', true);
+        }
+    }
+    function enterGuest() {
+        state.mode = 'guest'; state.user = null; state.vault = null; state.reconciled = false;
+        try { sessionStorage.setItem(SS_GUEST, '1'); } catch (e) { /* ignore */ }
+        hideAuth(); renderSignout(); renderStatus(); applyBackground();
+    }
+    async function guestClicked() {
+        const v = await dialog({
+            title: 'Continue as a guest?',
+            paragraphs: ['Your game progress and customization may not carry over to other copies of this website or other devices. Creating an account lets you sync your data across supported copies.'],
+            buttons: [{ label: 'Go Back', value: 'back' }, { label: 'Continue Anyway', value: 'go', primary: true }],
+            cancelValue: 'back'
+        });
+        if (v === 'go') enterGuest();
+    }
+    function onSessionExpired() {
+        if (state.expired) return;
+        state.expired = true; state.vault = null; renderStatus();
+        toast('Your session expired. Sign in again to resume syncing — your changes are kept on this device.', true);
+    }
+
+    async function signOutClicked() {
+        if (state.mode === 'guest') { state.mode = null; renderSignout(); setAuthMode('signin'); showAuth('forms'); return; }
+        const btn = $('ts-signout-btn'); btn.disabled = true;
+        try {
+            TSTheme.save(state.settings);                       // local copy always kept
+            let ok = true;
+            if (!state.expired && state.reconciled) {
+                toast('Saving your changes…');
+                const r = await Promise.race([flushAll(), sleep(10000).then(() => ({ ok: false }))]);
+                ok = r.ok;
+            }
+            if (!ok) {
+                const v = await dialog({
+                    title: 'Some changes haven’t synced',
+                    paragraphs: ['Some customization or game progress couldn’t be saved to your account yet. It’s still saved on this device and will sync the next time you sign in here.'],
+                    buttons: [{ label: 'Stay signed in', value: 'stay' }, { label: 'Sign out anyway', value: 'out', danger: true }], cancelValue: 'stay'
+                });
+                if (v !== 'out') return;
+            }
+            await api('POST', '/api/logout', {}, { noExpire: true });   // forgets the remembered sign-in on this device only
+            Object.values(pushTimers).forEach(clearTimeout);
+            state.mode = null; state.user = null; state.vault = null; state.reconciled = false; state.games = {};
+            renderSignout(); renderStatus();
+            setAuthMode('signin'); showAuth('forms');
+        } finally { btn.disabled = false; }
+    }
+    function renderSignout() {
+        const b = $('ts-signout-btn');
+        b.hidden = !state.mode;
+        const guest = state.mode === 'guest';
+        b.setAttribute('aria-label', guest ? 'Sign in or create an account' : 'Sign out');
+        b.title = guest ? 'Sign in / create account' : 'Sign out' + (state.user ? ' (' + state.user.username + ')' : '');
+        b.querySelector('i').className = guest ? 'fa-solid fa-right-to-bracket' : 'fa-solid fa-right-from-bracket';
+    }
+
+    // ============================================================== PANEL
+    let panelReturnFocus = null;
+    function openPanel() {
+        panelReturnFocus = document.activeElement;
+        $('ts-panel').hidden = false; $('ts-panel-backdrop').hidden = false;
+        $('ts-custom-btn').setAttribute('aria-expanded', 'true');
+        renderAccountSection(); renderBgPreview();
+        $('ts-panel-close').focus();
+    }
+    function closePanel() {
+        if ($('ts-panel').hidden) return;
+        $('ts-panel').hidden = true; $('ts-panel-backdrop').hidden = true;
+        $('ts-custom-btn').setAttribute('aria-expanded', 'false');
+        if (panelReturnFocus && panelReturnFocus.focus) panelReturnFocus.focus();
+    }
+    async function renderAccountSection() {
+        const box = $('ts-account'); const [cls, text] = overall();
+        const kids = [];
+        if (state.mode === 'account') {
+            kids.push(el('div', { class: 'ts-status-line' }, el('span', { class: 'ts-dot ' + cls }), el('span', { text: 'Signed in as ' + state.user.username + ' — ' + text })));
+            const acts = el('div', { class: 'ts-sync-actions' });
+            if (state.expired) acts.append(el('button', { type: 'button', class: 'ts-btn ts-btn-sm ts-btn-primary', text: 'Sign in again', onclick: () => { state.mode = null; setAuthMode('signin'); showAuth('forms'); } }));
+            else acts.append(el('button', { type: 'button', class: 'ts-btn ts-btn-sm', text: 'Sync now', onclick: syncNow }));
+            kids.push(acts);
+        } else if (state.mode === 'guest') {
+            kids.push(el('div', { class: 'ts-status-line' }, el('span', { class: 'ts-dot local' }), el('span', { text: 'Guest — everything is saved on this device only.' })));
+            if (API) kids.push(el('div', { class: 'ts-sync-actions' }, el('button', { type: 'button', class: 'ts-btn ts-btn-sm ts-btn-primary', text: 'Sign in to sync', onclick: () => { state.mode = null; renderSignout(); setAuthMode('signin'); showAuth('forms'); } })));
+        }
+        const list = el('ul', { class: 'ts-games' });
+        for (const a of ADAPTERS) {
+            const hasLocal = !!a.read(), g = state.games[a.id];
+            if (a.pm && !hasLocal && !g) continue;
+            let backups = [];
+            try { backups = await listBackups(a.id); } catch (e) { /* no IDB */ }
+            if (!hasLocal && !g && !backups.length && a.pm) continue;
+            const st = state.mode === 'account' ? (g ? g.status : (hasLocal ? 'waiting' : 'idle')) : 'local';
+            const label = { saved: 'Synced', saving: 'Saving…', waiting: 'Waiting to synchronize', failed: 'Save failed', conflict: 'Needs your choice', local: hasLocal ? 'On this device' : 'No save yet', idle: 'No save yet' }[st] || st;
+            const li = el('li', {}, el('div', { class: 'ts-game-top' }, el('span', { class: 'ts-dot ' + (st === 'idle' ? 'waiting' : st) }), el('span', { text: a.name }), el('span', { text: label })));
+            if (g && g.msg) li.append(el('div', { class: 'ts-game-sub', text: g.msg }));
+            const acts = el('div', { class: 'ts-sync-actions' });
+            if (state.mode === 'account' && st === 'conflict') acts.append(el('button', { type: 'button', class: 'ts-btn ts-btn-sm ts-btn-primary', text: 'Choose save', onclick: () => resolveLater(a) }));
+            if (backups.length) acts.append(el('button', { type: 'button', class: 'ts-btn ts-btn-sm', text: 'Restore backup (' + backups.length + ')', onclick: () => restoreBackup(a, backups) }));
+            if (acts.childNodes.length) li.append(acts);
+            list.append(li);
+        }
+        if (!list.childNodes.length) list.append(el('li', { text: 'Cloud saves are supported for Cookie Clicker Prox and games that use the Tabspace save protocol. No saves found on this device yet.' }));
+        box.replaceChildren(...kids, list);
+    }
+    async function resolveLater(a) {
+        if (state.currentGame) return;
+        try {
+            const data = await api('GET', '/api/data');
+            const rec = data.gameProgress && data.gameProgress[a.id];
+            const local = await readLocalGame(a);
+            if (!local) { setLater(state.user.uid, a.id, false); return syncNow(); }
+            const cloud = rec && validCloudRecord(a, rec) ? { ...rec, hash: await hashMap(rec.keys) } : null;
+            if (cloud && cloud.hash === local.hash) { markSynced(state.user.uid, a.id, cloud.rev, cloud.hash); setGameStatus(a.id, 'saved'); return; }
+            await resolveConflict({ a, local, cloud, why: cloud ? 'both-changed' : 'other-account' });
+        } catch (e) { toast('Couldn’t load your account save. Try again in a moment.', true); }
+    }
+    async function restoreBackup(a, backups) {
+        const b = backups[0];
+        const v = await dialog({
+            title: 'Restore ' + a.name + ' backup?',
+            paragraphs: ['Restore the backup from ' + fmtTime(b.createdAt) + ' (' + fmtBytes(b.size) + ')? Your current device save will be backed up first.', 'Close the game before restoring so it doesn’t overwrite the restored save.'],
+            buttons: [{ label: 'Cancel', value: 'no' }, { label: 'Restore', value: 'yes', primary: true }], cancelValue: 'no'
+        });
+        if (v !== 'yes') return;
+        try { await writeLocalGame(a, b.keys, 'before-restore'); toast(a.name + ' backup restored.'); schedulePush(a.id, 500); renderAccountSection(); }
+        catch (e) { toast('Restore failed — nothing was changed.', true); }
+    }
+    async function syncNow() {
+        if (state.mode !== 'account') return;
+        if (!state.reconciled) {
+            try {
+                const data = await api('GET', '/api/data');
+                await reconcileSettings(data.settings);
+                const conflicts = await reconcileGames(data.gameProgress || {});
+                state.reconciled = true; renderStatus();
+                for (const c of conflicts) await resolveConflict(c);
+            } catch (e) { toast('Still can’t reach your cloud data. Your local data is safe.', true); }
+            return;
+        }
+        const r = await flushAll();
+        toast(r.ok ? 'Everything is saved to your account.' : 'Some items couldn’t be saved yet — they’ll retry automatically.', !r.ok);
+    }
+    async function resetCustomization() {
+        const v = await dialog({
+            title: 'Reset customization?',
+            paragraphs: ['This restores the default theme color, removes your custom background image, and turns the interactive background back on. Your account and game progress are not affected.'],
+            buttons: [{ label: 'Cancel', value: 'no' }, { label: 'Reset', value: 'yes', danger: true }], cancelValue: 'no'
+        });
+        if (v !== 'yes') return;
+        try { await idbRun('files', 'readwrite', s => s.delete('bgImage')); } catch (e) { /* ignore */ }
+        if (state.localImageUrl) { URL.revokeObjectURL(state.localImageUrl); state.localImageUrl = null; }
+        const d = TSTheme.defaults();
+        state.settings = { ...state.settings, themeColor: d.themeColor, interactiveBg: true, bgImage: null };
+        $('ts-bg-error').textContent = '';
+        applyAllSettings(); settingsChanged();
+        toast('Customization reset.');
+    }
+
+    // ============================================================== WIRING
+    function wire() {
+        $('ts-custom-btn').addEventListener('click', () => ($('ts-panel').hidden ? openPanel() : closePanel()));
+        $('ts-panel-close').addEventListener('click', closePanel);
+        $('ts-panel-backdrop').addEventListener('click', closePanel);
+        colorInput().addEventListener('input', e => setThemeColor(e.target.value));
+        hexInput().addEventListener('input', e => {
+            const v = e.target.value.trim();
+            const ok = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v);
+            e.target.setAttribute('aria-invalid', String(!ok && v.length >= 4));
+            $('ts-hex-error').textContent = ok || v.length < 4 ? '' : 'Enter a hex color like #ef4444 or #e44.';
+            if (ok) setThemeColor(v, { fromHex: true });
+        });
+        hexInput().addEventListener('change', e => {
+            if (!setThemeColor(e.target.value)) { e.target.setAttribute('aria-invalid', 'true'); $('ts-hex-error').textContent = 'Invalid hex color — kept ' + state.settings.themeColor + '.'; }
+        });
+        const sw = $('ts-swatches');
+        PRESETS.forEach(c => sw.append(el('button', { type: 'button', class: 'ts-swatch', 'data-color': c, 'aria-label': 'Theme color ' + c, 'aria-pressed': 'false', style: 'background:' + c, onclick: () => setThemeColor(c) })));
+        $('ts-bg-upload').addEventListener('click', () => $('ts-bg-file').click());
+        $('ts-bg-file').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; handleImageFile(f); });
+        $('ts-bg-remove').addEventListener('click', removeImage);
+        $('ts-bg-toggle').addEventListener('change', e => setInteractive(e.target.checked));
+        $('ts-reset').addEventListener('click', resetCustomization);
+        $('ts-auth-form').addEventListener('submit', submitAuth);
+        $('ts-tab-signin').addEventListener('click', () => setAuthMode('signin'));
+        $('ts-tab-signup').addEventListener('click', () => setAuthMode('signup'));
+        $('ts-switch-btn').addEventListener('click', () => setAuthMode(authMode === 'signup' ? 'signin' : 'signup'));
+        $('ts-guest-btn').addEventListener('click', guestClicked);
+        $('ts-signout-btn').addEventListener('click', e => { e.stopPropagation(); signOutClicked(); });
+        // Capture phase so Escape closes our overlays without also closing the games view.
+        window.addEventListener('keydown', e => {
+            if (e.key !== 'Escape') return;
+            if (!$('ts-dialog').hidden) { e.stopImmediatePropagation(); e.preventDefault(); closeDialog(dialogCancel); }
+            else if (!$('ts-panel').hidden) { e.stopImmediatePropagation(); closePanel(); }
+            else if (!$('ts-auth').hidden) { e.stopImmediatePropagation(); }
+        }, true);
+        // Simple focus trap for the panel and dialog.
+        document.addEventListener('keydown', e => {
+            if (e.key !== 'Tab') return;
+            const root = !$('ts-dialog').hidden ? $('ts-dialog') : !$('ts-panel').hidden ? $('ts-panel') : !$('ts-auth').hidden ? $('ts-auth') : null;
+            if (!root) return;
+            const f = [...root.querySelectorAll('button, input, [tabindex]:not([tabindex="-1"])')].filter(n => !n.disabled && n.offsetParent !== null);
+            if (!f.length) return;
+            if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+            else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+        });
+    }
+
+    async function boot() {
+        wire();
+        setAuthMode('signin');
+        colorInput().value = state.settings.themeColor; hexInput().value = state.settings.themeColor;
+        $('ts-bg-toggle').checked = state.settings.interactiveBg;
+        document.querySelectorAll('.ts-swatch').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.color === state.settings.themeColor)));
+        if (window.setParticleColors) window.setParticleColors(TSTheme.cssVar('--accent-rgb') || '239, 68, 68', TSTheme.cssVar('--bg-rgb') || '11, 5, 6');
+        $('ts-img-note').textContent = IMG_ENABLED
+            ? 'PNG, JPEG, WebP or GIF up to 8 MB. Signed-in users’ images are uploaded to the image host and synced.'
+            : 'PNG, JPEG, WebP or GIF up to 8 MB. Images are stored on this device only (no image host configured), so they don’t sync to other devices or sites.';
+        const rec = await loadLocalImage();
+        if (state.settings.bgImage && state.settings.bgImage.source === 'local' && !rec) state.settings.bgImage = null; // image was cleared from storage
+        applyBackground();
+
+        if (!API) {
+            if (sessionStorage.getItem(SS_GUEST)) return enterGuest();
+            return showAuth('forms', { notice: DB ? 'Accounts need a secure (https) page in a modern browser, so only guest mode is available here.' : 'Accounts aren’t set up on this copy of the site yet, so only guest mode is available.' });
+        }
+        showAuth('checking');
+        const slow = setTimeout(() => { $('ts-auth-checking-text').textContent = 'Still connecting to the account database…'; }, 4000);
+        try {
+            const r = await api('GET', '/api/session', undefined, { timeout: 30000, noExpire: true });
+            clearTimeout(slow);
+            await enterAccount(r.user);
+        } catch (e) {
+            clearTimeout(slow);
+            let guest = false; try { guest = !!sessionStorage.getItem(SS_GUEST); } catch (err) { /* ignore */ }
+            if (e.status === 401) return guest ? enterGuest() : showAuth('forms');
+            const msg = ERR[e.code] || ERR.network;
+            if (guest) { enterGuest(); return toast(msg, true); }
+            showAuth('forms', { notice: msg, retry: () => boot2() });
+        }
+    }
+    async function boot2() {
+        showAuth('checking');
+        try { const r = await api('GET', '/api/session', undefined, { timeout: 30000, noExpire: true }); await enterAccount(r.user); }
+        catch (e) { showAuth('forms', e.status === 401 ? {} : { notice: ERR[e.code] || ERR.network, retry: () => boot2() }); }
+    }
+
+    boot();
+    return { gameOpened, gameClosed, _state: state, _adapters: ADAPTERS, _flush: flushAll };
+})();
+</script>
+</body>
+</html>
