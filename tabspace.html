@@ -649,7 +649,7 @@
             <p id="ts-bg-error" class="ts-error" role="alert"></p>
         </section>
         <section class="ts-section" aria-labelledby="ts-h-acct">
-            <h3 id="ts-h-acct">Account</h3>
+            <h3 id="ts-h-acct">Account &amp; saves</h3>
             <div id="ts-account"></div>
         </section>
         <div class="ts-panel-foot">
@@ -1185,13 +1185,12 @@
 
 <script>
 // =====================================================================
-//  TABSPACE ACCOUNTS & CUSTOMIZATION SYNC  (updated)
+//  TABSPACE ACCOUNTS, CLOUD SYNC & CUSTOMIZATION  (added)
 //  - Talks ONLY to Firebase Realtime Database (REST API, FIREBASE_CONFIG.databaseURL).
 //    No Firebase Authentication/Storage/Firestore/Functions/Hosting.
 //  - Never stores passwords or vault ids in localStorage.
-//  - GAME DATA SYNC REMOVED: game saves are no longer uploaded to or restored
-//    from accounts. Only theme/customization settings sync. Leftover game
-//    saves (cloud + local) are erased by the wipe helpers below.
+//  - Never deletes or rewrites existing game save keys except when the user
+//    explicitly restores/chooses a save (a backup is made first).
 // =====================================================================
 window.TS = (function () {
     'use strict';
@@ -1220,7 +1219,6 @@ window.TS = (function () {
         settings: TSTheme.boot,
         localImageUrl: null,   // object URL of IndexedDB image
         expired: false,
-        gameWipeOk: true,      // cloud game-save cleanup finished
     };
 
     // ------------------------------------------------------------------ utils
@@ -1363,19 +1361,47 @@ window.TS = (function () {
             return { user: { uid: await uidFor(vault), username: p.username } };
         }
         if (path === '/api/data') {
-            // Game data is no longer synced: only profile + settings are loaded.
-            const [profile, settings] = await Promise.all(['profile', 'settings'].map(k => call('GET', root + '/' + k, undefined, { timeout: opts.timeout })));
+            const [profile, settings, gameProgress] = await Promise.all(['profile', 'settings', 'gameProgress'].map(k => call('GET', root + '/' + k, undefined, { timeout: opts.timeout })));
             if (!profile) throw noSession();
-            return { profile, settings: settings || null, gameProgress: {} };
+            return { profile, settings: settings || null, gameProgress: gameProgress || {} };
         }
         if (method === 'PUT' && path === '/api/settings') {
             const patch = { ...cleanSettings(body.settings), schema: 1, updatedAt: SV_NOW };
             await call('PATCH', root + '/settings', patch, { keepalive: opts.keepalive });   // PATCH keeps unknown fields
             return { settings: await call('GET', root + '/settings') };
         }
-        // Game-progress endpoints (PUT /api/progress/<gid> and
-        // POST /api/progress/<gid>/backup) removed: this module is
-        // customization-only now, so those requests are rejected below.
+        let m = path.match(/^\/api\/progress\/([a-z0-9-]{1,64})$/);
+        if (m && method === 'PUT') {
+            const p = cleanProgress(body);
+            if (typeof p === 'string') throw new ApiError(p === 'too_large' ? 413 : 400, p);
+            const gp = root + '/gameProgress/' + m[1];
+            const cur = await call('GET', gp);
+            const curRev = cur && Number.isInteger(cur.rev) ? cur.rev : 0;
+            if (curRev !== p.baseRev) throw new ApiError(409, 'conflict', { current: cur });
+            const rec = { ...(cur && typeof cur === 'object' ? cur : {}), schema: 1, format: p.format, rev: curRev + 1, hash: p.hash, size: p.size, keys: p.keys, updatedAt: SV_NOW };
+            try { await call('PUT', gp, rec, { keepalive: opts.keepalive, query: { print: 'silent' } }); }
+            catch (e) {
+                if (e.code !== 'denied') throw e;
+                // Rules require rev === previous + 1, so a concurrent write from another device lands here.
+                const now = await call('GET', gp);
+                if (now && now.rev !== curRev) throw new ApiError(409, 'conflict', { current: now });
+                throw new ApiError(400, 'rejected');
+            }
+            call('PATCH', root + '/metadata', { lastSyncAt: SV_NOW, schemaVersion: 1 }, { query: { print: 'silent' } }).catch(() => {});
+            return { rev: rec.rev, hash: p.hash };
+        }
+        m = path.match(/^\/api\/progress\/([a-z0-9-]{1,64})\/backup$/);
+        if (m && method === 'POST') {
+            const p = cleanProgress({ ...body, baseRev: 0 });
+            if (typeof p === 'string') throw new ApiError(p === 'too_large' ? 413 : 400, p);
+            const base = root + '/backups/' + m[1];
+            const id = Date.now().toString(36) + hexOf(crypto.getRandomValues(new Uint8Array(3)));
+            await call('PUT', base + '/' + id, { keys: p.keys, hash: p.hash, size: p.size, reason: String(body.reason || '').slice(0, 64), createdAt: SV_NOW }, { query: { print: 'silent' } });
+            const list = (await call('GET', base, undefined, { query: { shallow: 'true' } })) || {};
+            const ids = Object.keys(list).sort();
+            for (const old of ids.slice(0, Math.max(0, ids.length - 5))) await call('DELETE', base + '/' + old).catch(() => {});
+            return { id };
+        }
         throw new ApiError(400, 'unknown_request');
     }
     const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1475,13 +1501,19 @@ window.TS = (function () {
         ADAPTERS.push(a);
         return a;
     }
-    // GAME DATA SYNC REMOVED — Tabspace no longer saves or restores game data
-    // to/from accounts (see the wipe helpers below). Theme and customization
-    // settings still sync. No adapters are registered, so nothing is scanned,
-    // pushed, or restored.
+    // Cookie Clicker (Prox): verified from its source — saves with
+    // localStorage "CookieClickerGame" (and "CookieClickerGameBeta" on beta builds).
+    lsAdapter({ id: 'cookie-clicker-prox', name: 'Cookie Clicker Prox', keys: ['CookieClickerGame', 'CookieClickerGameBeta', 'CookieClickerLang'], required: ['CookieClickerGame', 'CookieClickerGameBeta'], gameUrl: 'https://core-logic-utils.github.io/utils/bggms/ckyclkr' });
+    // Opt-in postMessage protocol (any game in GAMES may use it — see README).
     const pmAdapters = {};
-    const adapterById = id => null;
+    (typeof GAMES !== 'undefined' ? GAMES : []).forEach(g => {
+        const id = 'pm-' + fnv(g.url, 2166136261);
+        if (pmAdapters[g.url]) return;
+        pmAdapters[g.url] = lsAdapter({ id, name: g.name, keys: ['tabspace:pm:' + id], required: ['tabspace:pm:' + id], gameUrl: g.url, pm: true });
+    });
+    const adapterById = id => ADAPTERS.find(a => a.id === id);
     const keyToAdapter = {};
+    ADAPTERS.forEach(a => a.keys.forEach(k => { keyToAdapter[k] = a; }));
 
     // ---- sync bookkeeping (no secrets): tabspace:sync:v1
     function syncState() {
@@ -1504,43 +1536,6 @@ window.TS = (function () {
         writeJSON(LS_SYNC, s);
     }
     const isLater = (uid, gid) => !!((syncState().later[uid] || {})[gid]);
-
-    // ------------------------------------------------- game data removal
-    // Tabspace no longer saves game data to accounts. These helpers erase what
-    // the old system left behind: the signed-in vault's cloud game saves, this
-    // browser's synced game-save keys, and the local backup copies. Each part
-    // runs once and is retried on later loads if it fails.
-    const WIPE_LS_FLAG = 'tabspace:game-wipe-ls:v1';
-    const WIPE_IDB_FLAG = 'tabspace:game-wipe-idb:v1';
-    const GAME_SAVE_KEYS = ['CookieClickerGame', 'CookieClickerGameBeta', 'CookieClickerLang', LS_SYNC];
-    const isGameSaveKey = k => GAME_SAVE_KEYS.includes(k) || (typeof k === 'string' && k.indexOf('tabspace:pm:') === 0);
-    function wipeLocalGameSaves() {
-        let done = false;
-        try { done = !!localStorage.getItem(WIPE_LS_FLAG); } catch (e) { /* storage blocked */ }
-        if (done) return;
-        try {
-            const doomed = [];
-            for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k != null && isGameSaveKey(k)) doomed.push(k); }
-            for (const k of doomed) localStorage.removeItem(k);
-            localStorage.setItem(WIPE_LS_FLAG, '1');   // set only after the removals above succeeded
-        } catch (e) { /* storage blocked: retried on the next load */ }
-    }
-    async function wipeIdbGameBackups() {
-        let done = false;
-        try { done = !!localStorage.getItem(WIPE_IDB_FLAG); } catch (e) { /* storage blocked */ }
-        if (done) return;
-        await idbRun('backups', 'readwrite', s => s.clear());
-        localStorage.setItem(WIPE_IDB_FLAG, '1');       // set only after the clear succeeded
-    }
-    async function wipeCloudGameData() {
-        if (!state.vault) return { ok: false, skipped: true };   // cleanup not confirmed
-        const root = 'vaults/' + state.vault;
-        const [a, b] = await Promise.all([
-            rest('DELETE', root + '/gameProgress').then(() => true, () => false),
-            rest('DELETE', root + '/backups').then(() => true, () => false)
-        ]);
-        return { ok: a && b };
-    }
 
     // ------------------------------------------------------ status display
     function setGameStatus(gid, status, msg) { state.games[gid] = { status, msg: msg || '' }; renderStatus(); }
@@ -1940,10 +1935,16 @@ window.TS = (function () {
         if (!g || !frame || e.source !== frame.contentWindow || !g.origin || g.origin === 'null' || e.origin !== g.origin) return;
         const m = e.data;
         if (!m || typeof m !== 'object' || m.v !== 1 || typeof m.type !== 'string') return;
-        // Game-data sync removed: games using the save protocol still get an
-        // answer to load requests (with no data, so they start fresh), but
-        // saves are never persisted or sent to the account.
-        if (m.type === 'tabspace:load') e.source.postMessage({ type: 'tabspace:save-data', v: 1, data: null }, e.origin);
+        const a = pmAdapters[g.url]; if (!a) return;
+        const key = a.keys[0];
+        if (m.type === 'tabspace:save') {
+            if (typeof m.data !== 'string' || m.data.length > 1000000) return;
+            try { localStorage.setItem(key, m.data); } catch (err) { return; }
+            schedulePush(a.id);
+        } else if (m.type === 'tabspace:load') {
+            let data = null; try { data = localStorage.getItem(key); } catch (err) { /* ignore */ }
+            e.source.postMessage({ type: 'tabspace:save-data', v: 1, data }, e.origin);
+        }
     });
     window.addEventListener('online', () => { retryDelay = 15000; flushAll(); });
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushAll({ keepalive: true }); });
@@ -2047,12 +2048,10 @@ window.TS = (function () {
         try {
             const data = await api('GET', '/api/data', undefined, { timeout: 60000 });
             await reconcileSettings(data.settings);
+            const conflicts = await reconcileGames(data.gameProgress || {});
             state.reconciled = true;
             hideAuth();
-            // One-time cleanup: erase this account's leftover cloud game saves.
-            state.gameWipeOk = false; renderStatus();
-            state.gameWipeOk = (await wipeCloudGameData()).ok;
-            renderStatus();
+            for (const c of conflicts) await resolveConflict(c);
             if (!state.cookieOk) toast('This browser blocked local storage, so you’ll need to sign in again after reloading.', true);
             renderStatus();
         } catch (e) {
@@ -2075,7 +2074,7 @@ window.TS = (function () {
     async function guestClicked() {
         const v = await dialog({
             title: 'Continue as a guest?',
-            paragraphs: ['Accounts sync your theme and customization only. Game data is no longer saved to accounts — individual games may still keep their own saves on this device.'],
+            paragraphs: ['Your game progress and customization may not carry over to other copies of this website or other devices. Creating an account lets you sync your data across supported copies.'],
             buttons: [{ label: 'Go Back', value: 'back' }, { label: 'Continue Anyway', value: 'go', primary: true }],
             cancelValue: 'back'
         });
@@ -2101,7 +2100,7 @@ window.TS = (function () {
             if (!ok) {
                 const v = await dialog({
                     title: 'Some changes haven’t synced',
-                    paragraphs: ['Some customization couldn’t be saved to your account yet. It’s still saved on this device and will sync the next time you sign in here.'],
+                    paragraphs: ['Some customization or game progress couldn’t be saved to your account yet. It’s still saved on this device and will sync the next time you sign in here.'],
                     buttons: [{ label: 'Stay signed in', value: 'stay' }, { label: 'Sign out anyway', value: 'out', danger: true }], cancelValue: 'stay'
                 });
                 if (v !== 'out') return;
@@ -2142,7 +2141,6 @@ window.TS = (function () {
         const kids = [];
         if (state.mode === 'account') {
             kids.push(el('div', { class: 'ts-status-line' }, el('span', { class: 'ts-dot ' + cls }), el('span', { text: 'Signed in as ' + state.user.username + ' — ' + text })));
-            if (!state.gameWipeOk) kids.push(el('div', { class: 'ts-game-sub', text: 'Game-save cleanup pending — use Sync now to retry.' }));
             const acts = el('div', { class: 'ts-sync-actions' });
             if (state.expired) acts.append(el('button', { type: 'button', class: 'ts-btn ts-btn-sm ts-btn-primary', text: 'Sign in again', onclick: () => { state.mode = null; setAuthMode('signin'); showAuth('forms'); } }));
             else acts.append(el('button', { type: 'button', class: 'ts-btn ts-btn-sm', text: 'Sync now', onclick: syncNow }));
@@ -2168,7 +2166,7 @@ window.TS = (function () {
             if (acts.childNodes.length) li.append(acts);
             list.append(li);
         }
-        if (!list.childNodes.length) list.append(el('li', { text: 'Accounts sync your theme and customization only. Game data is no longer saved to accounts — some games may still keep their own saves on this device.' }));
+        if (!list.childNodes.length) list.append(el('li', { text: 'Cloud saves are supported for Cookie Clicker Prox and games that use the Tabspace save protocol. No saves found on this device yet.' }));
         box.replaceChildren(...kids, list);
     }
     async function resolveLater(a) {
@@ -2200,16 +2198,13 @@ window.TS = (function () {
             try {
                 const data = await api('GET', '/api/data');
                 await reconcileSettings(data.settings);
+                const conflicts = await reconcileGames(data.gameProgress || {});
                 state.reconciled = true; renderStatus();
-                state.gameWipeOk = false;
-                state.gameWipeOk = (await wipeCloudGameData()).ok;
-                renderStatus();
+                for (const c of conflicts) await resolveConflict(c);
             } catch (e) { toast('Still can’t reach your cloud data. Your local data is safe.', true); }
             return;
         }
-        if (!state.gameWipeOk) { state.gameWipeOk = (await wipeCloudGameData()).ok; renderStatus(); }
         const r = await flushAll();
-        if (!state.gameWipeOk) return toast('Game-save cleanup still pending — check your connection and try again.', true);
         toast(r.ok ? 'Everything is saved to your account.' : 'Some items couldn’t be saved yet — they’ll retry automatically.', !r.ok);
     }
     async function resetCustomization() {
@@ -2278,9 +2273,6 @@ window.TS = (function () {
 
     async function boot() {
         wire();
-        // One-time cleanup of the old game-save system (local side).
-        wipeLocalGameSaves();
-        wipeIdbGameBackups().catch(() => {});
         setAuthMode('signin');
         colorInput().value = state.settings.themeColor; hexInput().value = state.settings.themeColor;
         $('ts-bg-toggle').checked = state.settings.interactiveBg;
